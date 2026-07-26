@@ -244,14 +244,14 @@ SQLite, designed by hand, migration-managed with Alembic. Entities:
 
 | Table | Purpose | Notable columns |
 |---|---|---|
-| `users` | Identity + profile | `phone_number` (unique), `username` (unique), `display_name`, `avatar_url`, `about`, `last_seen_at`, `is_online` |
+| `users` | Identity + profile | `phone_number` (unique), `username` (unique), `display_name`, `avatar_url`, `avatar_color`, `about`, `last_seen_at`, `is_online`, `is_active` |
 | `verification_codes` | Mocked OTP challenges | `user_id`, `code`, `expires_at`, `consumed_at`, `attempts` |
 | `refresh_tokens` | Session persistence | `user_id`, `token_hash`, `expires_at`, `revoked_at`, `user_agent` |
 | `contacts` | Directed contact edges | `owner_id`, `contact_user_id`, `nickname`, unique `(owner_id, contact_user_id)` |
-| `conversations` | 1:1 and group threads | `type` (`direct`/`group`), `name`, `avatar_url`, `created_by`, `disappearing_seconds`, `last_message_at` |
+| `conversations` | 1:1 and group threads | `type` (`direct`/`group`), `name`, `avatar_url`, `created_by`, `direct_key` (unique), `disappearing_seconds`, `last_message_at` |
 | `conversation_participants` | Membership + per-user state | `role` (`member`/`admin`), `joined_at`, `left_at`, `last_read_message_id`, `is_muted`, `is_pinned` |
 
-| `messages` | Message content | `conversation_id`, `sender_id`, `type` (`text`/`media`/`system`), `body`, `ciphertext`, `reply_to_message_id`, `expires_at`, `edited_at`, `deleted_at` |
+| `messages` | Message content | `conversation_id`, `sender_id`, `type` (`text`/`media`/`system`), `ciphertext` + `encryption_key_id` + `encryption_algorithm`, `system_event` + `system_meta`, `reply_to_message_id`, `client_message_id`, `expires_at`, `edited_at`, `deleted_at` |
 | `message_receipts` | Per-recipient delivery state | `message_id`, `user_id`, `delivered_at`, `read_at`, unique `(message_id, user_id)` |
 | `message_reactions` | Emoji reactions | `message_id`, `user_id`, `emoji`, unique `(message_id, user_id, emoji)` |
 | `attachments` | Files and media | `message_id`, `file_name`, `content_type`, `size_bytes`, `width`, `height`, `storage_key` |
@@ -271,8 +271,19 @@ Design decisions worth defending:
   Written inside the same transaction as the message, so it cannot drift.
 - **Soft deletes** (`deleted_at`) on messages so "This message was deleted" tombstones and
   receipt history survive.
-- Composite indexes on `(conversation_id, created_at DESC)` for message pagination,
-  `(user_id, conversation_id)` for membership lookups, and partial indexes on active rows.
+- **Message content is stored only as ciphertext.** There is deliberately no plaintext
+  column: keeping both would defeat the sealing layer and make the encryption story
+  dishonest. The cipher is simulated, but the storage shape is the one real crypto needs.
+- **System messages are structured, not pre-rendered.** `system_event` + `system_meta` JSON
+  rather than a baked sentence like "Nipurn added Ravi", so wording stays a presentation
+  concern and can be translated or restyled without a migration.
+- **No `index=True` on UUID primary keys.** SQLite already maintains an implicit index for a
+  non-INTEGER primary key; declaring one builds a second identical B-tree that every insert
+  must update for no read benefit. Single-column indexes already covered by a composite
+  index's leftmost prefix are likewise omitted — this removed 15 redundant indexes.
+- Composite indexes on `(conversation_id, created_at)` for message pagination,
+  `(user_id, conversation_id)` for membership lookups, and `(user_id, read_at)` for bulk
+  read-receipt updates.
 
 A full ER diagram ships in the README.
 
