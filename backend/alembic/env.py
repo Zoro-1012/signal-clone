@@ -15,7 +15,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
-from app.db.types import UTCDateTime
+from app.db.types import EnumString, UTCDateTime
 
 # Importing the models package registers every mapper on Base.metadata, which is
 # what autogenerate diffs the live database against.
@@ -46,6 +46,8 @@ def _render_item(type_: str, obj: object, autogen_context: object) -> str | bool
     """
     if type_ == "type" and isinstance(obj, UTCDateTime):
         return "sa.DateTime()"
+    if type_ == "type" and isinstance(obj, EnumString):
+        return f"sa.String(length={obj.length})"
     return False
 
 

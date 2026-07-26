@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from app.db.types import UTCDateTime
+from app.db.types import EnumString, UTCDateTime
 from app.models.enums import MessageType, SystemEvent
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -49,7 +49,9 @@ class Message(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
-    type: Mapped[MessageType] = mapped_column(String(16), nullable=False, default=MessageType.TEXT)
+    type: Mapped[MessageType] = mapped_column(
+        EnumString(MessageType, 16), nullable=False, default=MessageType.TEXT
+    )
 
     # --- Sealed content ---------------------------------------------------
     ciphertext: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -59,7 +61,9 @@ class Message(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # --- System messages --------------------------------------------------
     # Structured rather than a pre-rendered sentence, so wording stays a client
     # concern and can be translated or restyled without a migration.
-    system_event: Mapped[SystemEvent | None] = mapped_column(String(48), nullable=True)
+    system_event: Mapped[SystemEvent | None] = mapped_column(
+        EnumString(SystemEvent, 48), nullable=True
+    )
     system_meta: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # --- Threading --------------------------------------------------------

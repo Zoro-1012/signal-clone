@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from app.db.types import UTCDateTime
+from app.db.types import EnumString, UTCDateTime
 from app.models.enums import ConversationType, ParticipantRole
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -37,7 +37,7 @@ class Conversation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "conversations"
 
-    type: Mapped[ConversationType] = mapped_column(String(16), nullable=False)
+    type: Mapped[ConversationType] = mapped_column(EnumString(ConversationType, 16), nullable=False)
 
     # Groups are named and can carry an avatar. Direct conversations derive both
     # from the other participant, so these stay null.
@@ -123,7 +123,7 @@ class ConversationParticipant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Covered by ix_participants_user_conversation as its leftmost prefix.
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role: Mapped[ParticipantRole] = mapped_column(
-        String(16), nullable=False, default=ParticipantRole.MEMBER
+        EnumString(ParticipantRole, 16), nullable=False, default=ParticipantRole.MEMBER
     )
 
     joined_at: Mapped[datetime] = mapped_column(

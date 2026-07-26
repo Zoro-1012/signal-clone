@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from enum import Enum
+from typing import Any, TypeVar
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, String
 from sqlalchemy.engine import Dialect
 from sqlalchemy.types import TypeDecorator
+
+E = TypeVar("E", bound=Enum)
 
 
 class UTCDateTime(TypeDecorator[datetime]):
@@ -51,3 +54,42 @@ class UTCDateTime(TypeDecorator[datetime]):
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
+
+
+class EnumString(TypeDecorator[E]):
+    """Store an Enum by its value, and read it back as the Enum member.
+
+    Declaring ``Mapped[MessageType] = mapped_column(String(16))`` type-checks and
+    writes correctly — a ``str``-mixin enum binds as its value — but the column
+    reads back as a plain ``str``. The annotation then lies: code that trusts it
+    and calls ``.value`` crashes at runtime, and the only way to write safe code
+    against it is defensive ``hasattr`` checks at every use site.
+
+    This decorator makes the annotation true in both directions, so services can
+    rely on enum members and exhaustive comparisons behave as written.
+
+    Values, not names, are persisted: ``'text'`` is self-describing in a database
+    console, whereas ``'TEXT'`` is an implementation detail of the Python class
+    and would break if a member were ever renamed.
+    """
+
+    impl = String
+    cache_ok = True
+
+    def __init__(self, enum_class: type[E], length: int = 32) -> None:
+        self.enum_class = enum_class
+        super().__init__(length=length)
+
+    def process_bind_param(self, value: E | str | None, dialect: Dialect) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, self.enum_class):
+            return str(value.value)
+        # Accept a raw string, but validate it: an unknown value would otherwise be
+        # written happily and only fail later, on read, far from the cause.
+        return str(self.enum_class(value).value)
+
+    def process_result_value(self, value: Any, dialect: Dialect) -> E | None:
+        if value is None:
+            return None
+        return self.enum_class(value)

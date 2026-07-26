@@ -1,8 +1,8 @@
 """create core messaging schema
 
-Revision ID: 3dc845cef592
+Revision ID: 17814246afe8
 Revises: 
-Created: 2026-07-26 11:17:13.020792+00:00
+Created: 2026-07-26 11:29:04.182749+00:00
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = '3dc845cef592'
+revision: str = '17814246afe8'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
