@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthScreen } from "@/features/auth/AuthScreen";
+import { AppShell } from "@/features/shell/AppShell";
 import { useSession } from "@/stores/session";
 
 export default function HomePage() {
@@ -24,9 +25,5 @@ export default function HomePage() {
 
   if (status === "anonymous" || !user) return <AuthScreen />;
 
-  return (
-    <main className="flex h-dvh items-center justify-center bg-surface-base">
-      <p className="text-content-secondary">Signed in as {user.display_name}</p>
-    </main>
-  );
+  return <AppShell user={user} />;
 }
