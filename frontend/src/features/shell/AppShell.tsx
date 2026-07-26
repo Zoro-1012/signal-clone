@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { ConversationList } from "@/features/conversations/ConversationList";
+import { ChatPane } from "@/features/messages/ChatPane";
 import {
   useConversationRealtime,
   useConversations,
@@ -33,9 +34,18 @@ export function AppShell({ user }: AppShellProps) {
   useConversationRealtime();
 
   const { data } = useConversations("");
+  const conversations = useMemo(() => data ?? [], [data]);
+
   const unreadTotal = useMemo(
-    () => (data ?? []).reduce((total, conversation) => total + conversation.unread_count, 0),
-    [data],
+    () => conversations.reduce((total, conversation) => total + conversation.unread_count, 0),
+    [conversations],
+  );
+
+  // Resolved from the same cached list the sidebar renders, so the header and
+  // the row can never disagree about a conversation's name or membership.
+  const activeConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === activeId) ?? null,
+    [conversations, activeId],
   );
 
   return (
@@ -59,10 +69,8 @@ export function AppShell({ user }: AppShellProps) {
               mobilePane === "chat" ? "block" : "hidden",
             )}
           >
-            {activeId ? (
-              <div className="flex h-full items-center justify-center text-content-secondary">
-                Conversation {activeId.slice(0, 8)}
-              </div>
+            {activeConversation ? (
+              <ChatPane conversation={activeConversation} user={user} />
             ) : (
               <EmptyChatPane />
             )}
