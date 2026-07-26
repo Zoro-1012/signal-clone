@@ -74,6 +74,32 @@ class ConversationRepository(BaseRepository[Conversation]):
         )
         return list(result.scalars().all())
 
+    async def get_peer_user_ids(self, user_id: str) -> list[str]:
+        """Everyone who shares at least one active conversation with a user.
+
+        This is the audience for a presence change: coming online is only of
+        interest to people who can actually see you in a conversation list, so
+        broadcasting more widely would leak who exists and waste fan-out.
+        """
+        mine = (
+            select(ConversationParticipant.conversation_id)
+            .where(
+                ConversationParticipant.user_id == user_id,
+                ConversationParticipant.left_at.is_(None),
+            )
+            .scalar_subquery()
+        )
+        result = await self.session.execute(
+            select(ConversationParticipant.user_id)
+            .where(
+                ConversationParticipant.conversation_id.in_(mine),
+                ConversationParticipant.user_id != user_id,
+                ConversationParticipant.left_at.is_(None),
+            )
+            .distinct()
+        )
+        return list(result.scalars().all())
+
     # -- Lookup ------------------------------------------------------------
 
     async def get_direct(self, user_id_a: str, user_id_b: str) -> Conversation | None:
