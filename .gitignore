@@ -51,3 +51,7 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 *.swp
+
+# Frontend build output
+frontend/.next/
+frontend/out/

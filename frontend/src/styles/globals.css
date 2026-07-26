@@ -1,0 +1,182 @@
+/*
+ * Design tokens.
+ *
+ * Values are calibrated to Signal Desktop's published palette so the clone reads
+ * as the real thing: the ultramarine accent, the 02-95 grey ramp, and the twelve
+ * conversation colours used for avatars. The structure and naming here are our
+ * own — tokens are grouped by *role* (surface, text, bubble) rather than by raw
+ * colour, so a theme swap is a change of values in one block rather than a hunt
+ * through components.
+ *
+ * Everything themable is a CSS custom property rather than a Tailwind variant.
+ * That means dark mode costs one class on <html>, and no component ever needs to
+ * know which theme is active.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* --- Signal palette (raw values, referenced by the role tokens below) --- */
+    --signal-ultramarine: #2c6bed;
+    --signal-ultramarine-dark: #1851b4;
+    --signal-ultramarine-light: #6191f3;
+    --signal-ultramarine-pastel: #abc4f8;
+    --signal-link: #315ff4;
+    --signal-green: #4caf50;
+    --signal-red: #f44336;
+    --signal-yellow: #ffd624;
+
+    --grey-02: #f6f6f6;
+    --grey-05: #e9e9e9;
+    --grey-15: #dedede;
+    --grey-20: #c6c6c6;
+    --grey-25: #b9b9b9;
+    --grey-45: #848484;
+    --grey-60: #5e5e5e;
+    --grey-65: #4a4a4a;
+    --grey-75: #3b3b3b;
+    --grey-80: #2e2e2e;
+    --grey-85: #262626;
+    --grey-90: #1b1b1b;
+    --grey-95: #121212;
+
+    /* --- Roles: light theme --- */
+    --surface-base: #ffffff;
+    --surface-panel: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-sunken: var(--grey-02);
+    --surface-hover: var(--grey-05);
+    --surface-active: var(--grey-15);
+    --surface-overlay: rgb(0 0 0 / 0.4);
+
+    --border-subtle: var(--grey-05);
+    --border-strong: var(--grey-20);
+
+    --text-primary: var(--grey-90);
+    --text-secondary: var(--grey-60);
+    --text-tertiary: var(--grey-45);
+    --text-on-accent: #ffffff;
+
+    --accent: var(--signal-ultramarine);
+    --accent-hover: var(--signal-ultramarine-dark);
+    --accent-subtle: var(--signal-ultramarine-pastel);
+
+    --bubble-incoming-bg: var(--grey-05);
+    --bubble-incoming-text: var(--grey-90);
+    --bubble-outgoing-bg: var(--signal-ultramarine);
+    --bubble-outgoing-text: #ffffff;
+
+    /* Layout constants, matching Signal Desktop's proportions. */
+    --nav-rail-width: 80px;
+    --header-height: 52px;
+    --list-width: 320px;
+    --bubble-radius: 18px;
+    --bubble-radius-grouped: 4px;
+
+    /* Signal's easing, used for panel and menu transitions. */
+    --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+
+    color-scheme: light;
+  }
+
+  .dark {
+    --surface-base: var(--grey-95);
+    --surface-panel: var(--grey-90);
+    --surface-raised: var(--grey-85);
+    --surface-sunken: #000000;
+    --surface-hover: var(--grey-80);
+    --surface-active: var(--grey-75);
+    --surface-overlay: rgb(0 0 0 / 0.6);
+
+    --border-subtle: var(--grey-75);
+    --border-strong: var(--grey-65);
+
+    --text-primary: var(--grey-02);
+    --text-secondary: var(--grey-25);
+    --text-tertiary: var(--grey-45);
+    --text-on-accent: #ffffff;
+
+    --accent: var(--signal-ultramarine);
+    --accent-hover: var(--signal-ultramarine-light);
+    --accent-subtle: var(--signal-ultramarine-dark);
+
+    --bubble-incoming-bg: var(--grey-75);
+    --bubble-incoming-text: var(--grey-02);
+    --bubble-outgoing-bg: var(--signal-ultramarine);
+    --bubble-outgoing-text: #ffffff;
+
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--surface-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Signal's scrollbars are thin and only visible against their track. */
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  /* Visible focus, but only for keyboard users — a persistent ring on every
+     mouse click would be noise, and removing it entirely breaks accessibility. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Message bubble tails. Signal squares off the corner nearest the tail and
+     leaves the other three fully rounded; grouped messages square the vertical
+     edge so a run reads as one block. */
+  .bubble-incoming {
+    border-radius: var(--bubble-radius);
+    border-bottom-left-radius: var(--bubble-radius-grouped);
+  }
+  .bubble-outgoing {
+    border-radius: var(--bubble-radius);
+    border-bottom-right-radius: var(--bubble-radius-grouped);
+  }
+  .bubble-grouped-incoming {
+    border-radius: var(--bubble-radius);
+    border-top-left-radius: var(--bubble-radius-grouped);
+    border-bottom-left-radius: var(--bubble-radius-grouped);
+  }
+  .bubble-grouped-outgoing {
+    border-radius: var(--bubble-radius);
+    border-top-right-radius: var(--bubble-radius-grouped);
+    border-bottom-right-radius: var(--bubble-radius-grouped);
+  }
+}
