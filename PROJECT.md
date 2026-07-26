@@ -11,8 +11,8 @@
 |---|---|
 | **Assignment** | Scaler SDE Fullstack Assignment — Secure Messaging Platform (Signal Clone) |
 | **Candidate** | Nipurn |
-| **Repository** | `<github-url>` — public, contains `frontend/` and `backend/` |
-| **Live demo** | `<vercel-url>` (frontend) · `<render-url>` (API) |
+| **Repository** | https://github.com/Zoro-1012/signal-clone — public, contains `frontend/` and `backend/` |
+| **Live demo** | https://signal-clone-olive.vercel.app · API: https://signal-clone-api-cltw.onrender.com |
 | **Estimated effort (per brief)** | ~24 hours |
 | **Started** | 26 July 2026 |
 

@@ -8,8 +8,8 @@ Built for the Scaler SDE Fullstack assignment.
 
 | | |
 |---|---|
-| **Live demo** | `<vercel-url>` |
-| **API** | `<render-url>` · [interactive docs](https://example.com/docs) |
+| **Live demo** | https://signal-clone-olive.vercel.app |
+| **API** | https://signal-clone-api-cltw.onrender.com · [interactive docs](https://signal-clone-api-cltw.onrender.com/docs) |
 | **Repository** | https://github.com/Zoro-1012/signal-clone |
 
 > **Encryption is simulated.** The brief permits this explicitly. Messages are stored
@@ -21,7 +21,12 @@ Built for the Scaler SDE Fullstack assignment.
 ## Try it
 
 The database is seeded, so the app is usable the moment it loads. Sign in with any of
-these numbers — the verification code is always `123456`.
+these numbers — including the `+91` country code — and the verification code is always
+`123456`.
+
+> The API is on Render's free tier and sleeps after 15 minutes idle. The first request
+> after a pause takes roughly 30 seconds while the instance wakes; it is responsive
+> immediately afterwards.
 
 | Name | Phone number | Username |
 |---|---|---|
