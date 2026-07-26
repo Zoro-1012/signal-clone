@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.db.types import UTCDateTime
+
+
+def _utcnow() -> datetime:
+    """Timezone-aware now, with the microsecond precision SQLite lacks."""
+    return datetime.now(timezone.utc)
+
 
 # Explicit constraint naming. Without this SQLite generates anonymous constraints,
 # and Alembic then cannot emit a DROP for them — migrations become one-way.
@@ -52,18 +58,29 @@ class UUIDPrimaryKeyMixin:
 
 
 class TimestampMixin:
-    """Adds server-managed created/updated timestamps.
+    """Adds created/updated timestamps with microsecond precision.
 
-    Defaults are evaluated by the database, not Python, so rows written by
-    migrations, the seeder or a direct SQL fix are timestamped consistently.
+    The default is generated in Python, not by the database. SQLite's
+    ``CURRENT_TIMESTAMP`` resolves only to the **second**, so every message sent
+    within the same second would share a timestamp — and since the tie-break is a
+    random UUID, a transcript would render those messages in arbitrary order.
+    For a chat application that is a correctness bug, not a cosmetic one: it also
+    breaks cursor pagination, which relies on a total order.
+
+    ``server_default`` is kept as a safety net so a row inserted by raw SQL or a
+    migration still gets a timestamp, just a coarser one.
     """
 
     created_at: Mapped[datetime] = mapped_column(
-        UTCDateTime, server_default=func.now(), nullable=False
+        UTCDateTime,
+        default=_utcnow,
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         UTCDateTime,
+        default=_utcnow,
+        onupdate=_utcnow,
         server_default=func.now(),
-        onupdate=func.now(),
         nullable=False,
     )
