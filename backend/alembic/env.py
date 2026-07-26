@@ -15,6 +15,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
+from app.db.paths import resolve_sqlite_url
 from app.db.types import EnumString, UTCDateTime
 
 # Importing the models package registers every mapper on Base.metadata, which is
@@ -22,7 +23,11 @@ from app.db.types import EnumString, UTCDateTime
 import app.models  # noqa: F401  isort:skip
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.sync_database_url)
+# Resolved through the shared helper, which anchors a relative path and
+# creates its directory. Building the URL directly here is what broke the
+# first deploy: var/ is git-ignored, so it does not exist on a fresh clone
+# and SQLite cannot create a file in a directory that is not there.
+config.set_main_option("sqlalchemy.url", resolve_sqlite_url(settings.sync_database_url))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

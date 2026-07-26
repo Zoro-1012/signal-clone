@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import event
@@ -15,33 +14,14 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from app.core.config import BACKEND_DIR, settings
+from app.core.config import settings
 from app.core.logging import get_logger
+from app.db.paths import resolve_sqlite_url
 
 logger = get_logger(__name__)
 
 
-def _resolve_sqlite_path(url: str) -> str:
-    """Anchor relative SQLite paths to backend/ and ensure the directory exists.
-
-    Without this, ``sqlite:///./var/signal.db`` resolves against whatever
-    directory the process happened to start in, so the API and the seed script
-    can silently end up using two different database files.
-    """
-    marker = "sqlite+aiosqlite:///"
-    if not url.startswith(marker):
-        return url
-    raw_path = url[len(marker) :]
-    if raw_path == ":memory:" or raw_path.startswith(":memory:"):
-        return url
-    path = Path(raw_path)
-    if not path.is_absolute():
-        path = (BACKEND_DIR / path).resolve()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return f"{marker}{path}"
-
-
-DATABASE_URL = _resolve_sqlite_path(settings.database_url)
+DATABASE_URL = resolve_sqlite_url(settings.database_url)
 
 _IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
