@@ -440,8 +440,11 @@ Stated plainly, so they read as decisions rather than gaps.
    SQLite file does not survive an instance restart. The service re-migrates and re-seeds
    on boot, so the demo is always usable, but messages a visitor sends are not permanent.
 1. **Encryption is simulated.** The envelope is real; the cipher is not.
-2. **OTP is a fixed development code** with no SMS provider. Rate limiting, expiry and
-   single-use consumption are still enforced.
+2. **OTP is a fixed code** (`123456`), enabled by the `MOCK_VERIFICATION` flag, because
+   there is no SMS provider. Rate limiting, expiry, attempt limits and single-use
+   consumption are all still enforced, so the flow exercises the same paths a real
+   provider would. Turning the flag off restores random codes — which is the same change
+   that would wire up a provider.
 3. **SQLite is the production database**, as mandated, with WAL enabled. The repository
    layer is dialect-agnostic; Postgres would be a connection-string change.
 4. **Single backend process.** Presence, typing and the connection registry are in-memory,

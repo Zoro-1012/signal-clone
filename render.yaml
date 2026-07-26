@@ -34,6 +34,11 @@ services:
     envVars:
       - key: ENVIRONMENT
         value: production
+      # The brief permits mocked verification, and this demo has no SMS
+      # provider. With it off, codes would be random and undeliverable, so
+      # nobody could sign in at all.
+      - key: MOCK_VERIFICATION
+        value: "true"
       - key: DEBUG
         value: "false"
       - key: PYTHON_VERSION

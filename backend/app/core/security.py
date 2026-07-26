@@ -119,12 +119,16 @@ def refresh_token_expiry() -> datetime:
 def generate_verification_code() -> str:
     """Issue an OTP.
 
-    Development and test environments return the fixed code the brief calls for,
-    so the demo is usable without an SMS provider. Production would generate a
-    random code — the branch exists to make the mock an explicit, visible
-    decision rather than a hardcoded value buried in a service.
+    Returns the fixed code while `mock_verification` is on, which the brief
+    permits and which is what makes the demo usable without an SMS provider.
+
+    The switch is deliberately independent of `environment`. Tying it to
+    "not production" meant the deployed app generated a random code and had
+    nowhere to deliver it, locking every user out - the mock has to be turned
+    off in the same change that wires up a real provider, not implicitly by
+    setting an environment name.
     """
-    if not settings.is_production:
+    if settings.mock_verification:
         return settings.mock_otp_code
     return f"{secrets.randbelow(1_000_000):06d}"
 

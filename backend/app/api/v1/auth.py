@@ -73,9 +73,10 @@ async def register(payload: RegisterRequest, session: SessionDep) -> ChallengeRe
     return ChallengeResponse(
         phone_number=user.phone_number,
         expires_in_seconds=settings.otp_ttl_seconds,
-        # Returned outside production only: verification is mocked by design, and
-        # this is what lets a reviewer complete onboarding without an SMS provider.
-        dev_code=None if settings.is_production else code,
+        # Surfaced only while verification is mocked, which is what lets a
+        # reviewer complete onboarding without an SMS provider. Turning the mock
+        # off hides it and restores real random codes in one change.
+        dev_code=code if settings.mock_verification else None,
     )
 
 
@@ -89,7 +90,7 @@ async def login(payload: LoginRequest, session: SessionDep) -> ChallengeResponse
     return ChallengeResponse(
         phone_number=user.phone_number,
         expires_in_seconds=settings.otp_ttl_seconds,
-        dev_code=None if settings.is_production else code,
+        dev_code=code if settings.mock_verification else None,
     )
 
 

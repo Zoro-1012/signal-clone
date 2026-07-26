@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     # The brief explicitly permits mocked phone verification. The code is fixed,
     # but expiry, attempt limits and single-use consumption are still enforced so
     # the flow exercises the same paths a real provider would.
+    #
+    # Gating this on `environment != production`
+    # was a mistake that made the deployed demo unusable: production generated a
+    # random code and then, with no SMS provider wired up, had nowhere to send
+    # it - so nobody could ever sign in. The brief explicitly permits mocked
+    # verification, so it is an explicit switch that a real deployment turns off
+    # at the same moment it wires up a provider.
+    mock_verification: bool = True
     mock_otp_code: str = "123456"
     otp_ttl_seconds: int = 300
     otp_max_attempts: int = 5
