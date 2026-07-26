@@ -13,12 +13,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect:
+    # The frontend is built after the backend, so for part of this project's
+    # history frontend/ does not exist. A job that fails because a directory is
+    # not there yet trains everyone to ignore red CI, which is worse than having
+    # no CI at all — so the workload is detected and skipped honestly instead.
+    name: Detect workspaces
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.check.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::frontend/ is not present yet - skipping its checks."
+          fi
+
   backend:
     name: Backend · lint, types, tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    env:
+      ENVIRONMENT: test
+      JWT_SECRET_KEY: ci-only-signing-key-at-least-32-bytes-long
     steps:
       - uses: actions/checkout@v4
 
@@ -43,8 +66,20 @@ jobs:
       - name: Tests (pytest)
         run: pytest --cov=app --cov-report=term-missing
 
+      - name: Migrations apply cleanly and are reversible
+        # A migration that cannot be rolled back is a one-way door. Proving the
+        # round trip here is what stops that being discovered in production.
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./var/ci.db
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+
   frontend:
     name: Frontend · lint, types, build
+    needs: detect
+    if: needs.detect.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
