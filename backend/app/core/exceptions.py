@@ -121,7 +121,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:
         # Expected failures are logged at info: they are outcomes, not defects.
-        logger.info("domain_error", extra={"code": exc.code, "message": exc.message})
+        #
+        # The keys here must not collide with LogRecord's own attributes. `message`
+        # in particular is reserved, and passing it via `extra` makes logging raise
+        # KeyError — which would turn every handled domain error into a 500.
+        logger.info(
+            "domain_error",
+            extra={"error_code": exc.code, "error_detail": exc.message},
+        )
         return JSONResponse(status_code=exc.status_code, content=exc.to_payload())
 
     @app.exception_handler(RequestValidationError)

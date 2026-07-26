@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from collections.abc import MutableMapping
 from typing import Any
 
 _CONFIGURED = False
@@ -78,5 +79,30 @@ def configure_logging(*, debug: bool = False, json_output: bool = False) -> None
     _CONFIGURED = True
 
 
-def get_logger(name: str) -> logging.Logger:
-    return logging.getLogger(name)
+class SafeExtraAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]
+    """A logger that cannot be broken by an unlucky ``extra`` key.
+
+    ``logging`` refuses to build a record when ``extra`` contains a key that
+    already exists on ``LogRecord`` — ``message``, ``name``, ``module`` and so on
+    — and raises ``KeyError`` instead. That turns a log line into an exception,
+    which is especially dangerous inside an error handler, where it converts a
+    handled 4xx into an unhandled 500.
+
+    Rather than rely on every call site remembering the reserved list, colliding
+    keys are prefixed here, once, for every logger in the application.
+    """
+
+    def process(
+        self, msg: Any, kwargs: MutableMapping[str, Any]
+    ) -> tuple[Any, MutableMapping[str, Any]]:
+        extra = kwargs.get("extra")
+        if extra:
+            kwargs["extra"] = {
+                (f"ctx_{key}" if key in _RESERVED else key): value for key, value in extra.items()
+            }
+        return msg, kwargs
+
+
+def get_logger(name: str) -> SafeExtraAdapter:
+    """Return a logger for ``name`` that sanitises structured context."""
+    return SafeExtraAdapter(logging.getLogger(name), {})
