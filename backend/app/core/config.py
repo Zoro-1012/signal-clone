@@ -25,6 +25,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 # Bandit's hardcoded-credential rule is suppressed here for exactly that reason.
 DEFAULT_JWT_SECRET = "dev-only-secret-do-not-use-in-production"  # noqa: S105
 
+# RFC 7518 requires an HMAC key at least the length of the hash output (32 bytes
+# for SHA-256). PyJWT only warns about shorter keys, so this is enforced at boot.
+MIN_JWT_SECRET_BYTES = 32
+# Not a credential: the shell command an operator runs to mint one.
+_SECRET_RECIPE = 'python -c "import secrets; print(secrets.token_urlsafe(48))"'  # noqa: S105
+
 
 class Settings(BaseSettings):
     """Typed, validated application settings sourced from the environment."""
@@ -115,10 +121,20 @@ class Settings(BaseSettings):
         the only safe behaviour: the failure is immediate, obvious and impossible
         to overlook, whereas the vulnerability would be silent.
         """
-        if self.environment == "production" and self.jwt_secret_key == DEFAULT_JWT_SECRET:
+        if self.environment != "production":
+            return self
+
+        if self.jwt_secret_key == DEFAULT_JWT_SECRET:
             raise ValueError(
                 "JWT_SECRET_KEY must be set to a unique value in production. "
-                'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"'
+                f"Generate one with: {_SECRET_RECIPE}"
+            )
+        # RFC 7518 §3.2: an HMAC key for HS256 must be at least as long as the
+        # hash output. A shorter key weakens the signature, and PyJWT only warns.
+        if len(self.jwt_secret_key.encode("utf-8")) < MIN_JWT_SECRET_BYTES:
+            raise ValueError(
+                f"JWT_SECRET_KEY must be at least {MIN_JWT_SECRET_BYTES} bytes for "
+                f"{self.jwt_algorithm}. Generate one with: {_SECRET_RECIPE}"
             )
         return self
 
