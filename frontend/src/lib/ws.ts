@@ -31,8 +31,10 @@ export type ConnectionState = "connecting" | "open" | "closed";
 type FrameListener = (frame: Frame) => void;
 type StateListener = (state: ConnectionState) => void;
 
-const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL ?? API_URL.replace(/^http/, "ws");
+// Derived from the API origin when unset, which is correct for every deployment
+// where both are served from the same host - and http->ws, https->wss maps
+// cleanly, so the secure scheme is preserved rather than silently downgraded.
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? API_URL.replace(/^http/, "ws");
 
 /** Retry backoff in milliseconds, capped so a long outage still recovers promptly. */
 const BACKOFF_MS = [500, 1000, 2000, 5000, 10000, 15000] as const;

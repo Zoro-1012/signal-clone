@@ -8,7 +8,28 @@
 
 import type { ApiErrorBody } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+/**
+ * Backend origin, inlined at build time by Next.
+ *
+ * Deliberately no silent localhost fallback. A deployed bundle built without
+ * this variable would point every request at the *visitor's own machine*, fail,
+ * and surface as "could not reach the server" - a misconfiguration that looks
+ * identical to the server being down, which is the hardest kind to diagnose.
+ *
+ * Defaulting only in development keeps local setup zero-config while making a
+ * missing production value impossible to miss.
+ */
+function resolveApiUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  if (configured) return configured.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "development") return "http://localhost:8000";
+  throw new Error(
+    "NEXT_PUBLIC_API_URL is not set. It is inlined at build time, so it must be " +
+      "present in the build environment - setting it afterwards requires a redeploy.",
+  );
+}
+
+const API_URL = resolveApiUrl();
 const PREFIX = "/api/v1";
 
 /** Thrown for every non-2xx response, carrying the backend's stable error code. */
