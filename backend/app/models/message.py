@@ -199,8 +199,11 @@ class Attachment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "attachments"
 
-    message_id: Mapped[str] = mapped_column(
-        ForeignKey("messages.id", ondelete="CASCADE"), nullable=False, index=True
+    # Nullable: a file is uploaded before the message that carries it exists, so
+    # an attachment is briefly an orphan. Only orphans may be claimed on send,
+    # which is what stops one user attaching another user's file to their message.
+    message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), nullable=True, index=True
     )
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     content_type: Mapped[str] = mapped_column(String(128), nullable=False)

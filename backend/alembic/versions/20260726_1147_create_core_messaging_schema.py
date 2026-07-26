@@ -1,8 +1,8 @@
 """create core messaging schema
 
-Revision ID: 17814246afe8
+Revision ID: 698f2d6a6f8c
 Revises: 
-Created: 2026-07-26 11:29:04.182749+00:00
+Created: 2026-07-26 11:47:27.056883+00:00
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = '17814246afe8'
+revision: str = '698f2d6a6f8c'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -138,7 +138,7 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_messages_sender_id'), ['sender_id'], unique=False)
 
     op.create_table('attachments',
-    sa.Column('message_id', sa.String(), nullable=False),
+    sa.Column('message_id', sa.String(), nullable=True),
     sa.Column('file_name', sa.String(length=255), nullable=False),
     sa.Column('content_type', sa.String(length=128), nullable=False),
     sa.Column('size_bytes', sa.Integer(), nullable=False),
