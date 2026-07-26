@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # backend/  — the directory containing app/, used to anchor relative paths so the
 # server behaves identically regardless of the working directory it is booted from.
@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     # ---- Uploads ---------------------------------------------------------
     upload_dir: Path = BACKEND_DIR / "var" / "uploads"
     max_upload_bytes: int = 10 * 1024 * 1024  # 10 MiB
-    allowed_upload_types: list[str] = Field(
+    allowed_upload_types: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: [
             "image/png",
             "image/jpeg",
@@ -91,7 +91,9 @@ class Settings(BaseSettings):
     )
 
     # ---- CORS ------------------------------------------------------------
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
 
     # ---- Real-time -------------------------------------------------------
     ws_heartbeat_seconds: int = 25
@@ -101,15 +103,27 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", "allowed_upload_types", mode="before")
     @classmethod
     def _split_comma_separated(cls, value: object) -> object:
-        """Allow list settings to be supplied as ``a,b,c`` in a .env file.
+        """Accept ``a,b,c`` as well as a JSON array for list settings.
 
-        Twelve-factor environments only carry strings, so a comma-separated form
-        has to be accepted alongside the JSON list Pydantic expects natively.
+        Twelve-factor environments carry only strings, and a hosting platform's
+        environment editor gives you a plain text box - nobody types a JSON array
+        into it. Both forms are therefore accepted.
+
+        The ``NoDecode`` annotation on these fields is what makes this validator
+        reachable at all: pydantic-settings otherwise json.loads() any complex
+        type straight from the environment and raises SettingsError before a
+        field validator ever runs. Without it, CORS_ORIGINS=http://example.com
+        crashes the process at startup - which is precisely the value a real
+        deployment would set.
         """
         if isinstance(value, str):
-            if value.startswith("["):
-                return value
-            return [item.strip() for item in value.split(",") if item.strip()]
+            stripped = value.strip()
+            if stripped.startswith("["):
+                import json
+
+                parsed: object = json.loads(stripped)
+                return parsed
+            return [item.strip() for item in stripped.split(",") if item.strip()]
         return value
 
     @model_validator(mode="after")
