@@ -39,6 +39,10 @@ services:
       # nobody could sign in at all.
       - key: MOCK_VERIFICATION
         value: "true"
+      # The API is meant to be explored by a reviewer, so the interactive docs
+      # stay available on this deployment.
+      - key: ENABLE_DOCS
+        value: "true"
       - key: DEBUG
         value: "false"
       - key: PYTHON_VERSION

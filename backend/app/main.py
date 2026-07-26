@@ -82,10 +82,9 @@ def create_app() -> FastAPI:
             "REST for state changes, WebSockets for live delivery."
         ),
         lifespan=lifespan,
-        # Interactive docs are a development affordance, not a production surface.
-        docs_url=None if settings.is_production else "/docs",
-        redoc_url=None if settings.is_production else "/redoc",
-        openapi_url=None if settings.is_production else "/openapi.json",
+        docs_url="/docs" if settings.enable_docs else None,
+        redoc_url="/redoc" if settings.enable_docs else None,
+        openapi_url="/openapi.json" if settings.enable_docs else None,
     )
 
     app.add_middleware(
@@ -95,6 +94,22 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> dict[str, str]:
+        """Describe the service at its bare URL.
+
+        Without this the root returns a 404, which reads as a broken deployment
+        to anyone who pastes the base URL into a browser - the first thing a
+        reviewer is likely to do.
+        """
+        return {
+            "service": settings.app_name,
+            "version": settings.app_version,
+            "status": "ok",
+            "docs": "/docs" if settings.enable_docs else "disabled",
+            "health": f"{settings.api_v1_prefix}/health",
+        }
 
     register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
