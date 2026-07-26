@@ -39,9 +39,14 @@ def new_uuid() -> str:
 
 
 class UUIDPrimaryKeyMixin:
-    """Adds a client-unguessable string primary key."""
+    """Adds a client-unguessable string primary key.
 
-    id: Mapped[str] = mapped_column(primary_key=True, default=new_uuid, index=True)
+    No ``index=True``: SQLite already maintains an implicit index for a non-INTEGER
+    primary key, so declaring one would build a second identical B-tree that every
+    insert has to update for no read benefit.
+    """
+
+    id: Mapped[str] = mapped_column(primary_key=True, default=new_uuid)
 
 
 class TimestampMixin:
