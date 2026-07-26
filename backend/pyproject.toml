@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signal-clone-backend"
+version = "1.0.0"
+description = "Secure Messaging Platform (Signal Clone) — FastAPI backend"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "aiosqlite>=0.20",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "pyjwt>=2.8",
+    "python-multipart>=0.0.9",
+    "email-validator>=2.1",
+    "pillow>=10.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.5",
+    "black>=24.4",
+    "mypy>=1.10,<2.0",   # 2.x crashes with an INTERNAL ERROR on this codebase
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# --------------------------------------------------------------------------
+# Tooling. Configured once here so CI and local runs can never disagree.
+# --------------------------------------------------------------------------
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort — import ordering
+    "B",        # bugbear — likely bugs
+    "C4",       # comprehension simplifications
+    "UP",       # pyupgrade — modern syntax
+    "ASYNC",    # async correctness (blocking calls in async defs)
+    "S",        # bandit — security lint
+    "T20",      # no stray print statements
+    "SIM",      # simplification
+    "RUF",
+]
+ignore = [
+    "B008",  # FastAPI's Depends() in defaults is the documented idiom
+    "S101",  # asserts are the point of the test suite
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]      # hardcoded test credentials are fine
+"scripts/seed.py" = ["T20", "S311"]  # seeding prints progress and uses non-crypto random
+"alembic/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+plugins = []
+warn_unreachable = true
+disallow_untyped_decorators = false   # FastAPI decorators are untyped upstream
+exclude = ["alembic/", "tests/"]
+
+[[tool.mypy.overrides]]
+module = ["aiosqlite.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+# Fail on deprecations we introduce; ignore those from upstream libraries,
+# which we cannot fix and which would otherwise break the suite on any upgrade.
+filterwarnings = ["error::DeprecationWarning:app.*"]
