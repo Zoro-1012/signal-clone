@@ -415,8 +415,14 @@ every push, plus eslint, `tsc` and a production build for the frontend.
 ## Deployment
 
 **Backend → Render.** The repository contains `render.yaml`; point Render at it and the
-service, its persistent disk and its environment are provisioned in one step. The disk
-matters — without it SQLite is recreated empty on every redeploy.
+service and its environment are provisioned in one step.
+
+Render's free tier provides no persistent disk, so migrations and seeding run at **boot**
+rather than at build. Both are idempotent — Alembic is a no-op once at head, and the
+seeder detects existing data and stops — so this costs nothing when state survives and
+rebuilds the demo when it does not. The practical consequence is that messages sent by a
+visitor are lost when the instance restarts, and the seeded demo data returns. A paid disk
+or a managed Postgres would remove that; neither is necessary for a demo.
 
 **Frontend → Vercel.** Import the repository, set the root directory to `frontend`, and
 add `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` pointing at the Render service.
@@ -430,6 +436,9 @@ wildcard, so it must be the real origin.
 
 Stated plainly, so they read as decisions rather than gaps.
 
+0. **Deployed state is ephemeral.** Render's free tier has no persistent disk, so the
+   SQLite file does not survive an instance restart. The service re-migrates and re-seeds
+   on boot, so the demo is always usable, but messages a visitor sends are not permanent.
 1. **Encryption is simulated.** The envelope is real; the cipher is not.
 2. **OTP is a fixed development code** with no SMS provider. Rate limiting, expiry and
    single-use consumption are still enforced.
