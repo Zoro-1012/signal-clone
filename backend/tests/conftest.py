@@ -50,15 +50,20 @@ async def app_client(db_path: Path) -> AsyncGenerator[tuple[object, object], Non
     """
     from fastapi.testclient import TestClient
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
 
     import app.models  # noqa: F401  registers every mapper
     from app.db.base import Base
-    from app.db.session import get_session
+    from app.db.session import get_session, get_session_factory
     from app.main import create_app
 
     engine = create_async_engine(
         f"sqlite+aiosqlite:///{db_path}",
         connect_args={"check_same_thread": False},
+        # Mirrors the application engine. Without it, a pooled connection left
+        # behind by a WebSocket session is terminated during loop shutdown and
+        # deadlocks in SQLAlchemy's greenlet bridge, hanging the test run.
+        poolclass=NullPool,
     )
     factory = async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
 
@@ -71,6 +76,10 @@ async def app_client(db_path: Path) -> AsyncGenerator[tuple[object, object], Non
 
     application = create_app()
     application.dependency_overrides[get_session] = _override
+    # The WebSocket endpoint opens its own short sessions, so it needs the
+    # factory rather than a single session. Overriding it here is what lets the
+    # socket see the same temporary database as the HTTP routes.
+    application.dependency_overrides[get_session_factory] = lambda: factory
 
     with TestClient(application) as client:
         yield client, factory

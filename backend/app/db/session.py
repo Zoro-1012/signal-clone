@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from app.core.config import BACKEND_DIR, settings
 from app.core.logging import get_logger
@@ -42,13 +43,27 @@ def _resolve_sqlite_path(url: str) -> str:
 
 DATABASE_URL = _resolve_sqlite_path(settings.database_url)
 
+_IS_SQLITE = DATABASE_URL.startswith("sqlite")
+
 engine = create_async_engine(
     DATABASE_URL,
     echo=settings.db_echo,
     future=True,
     # SQLite refuses cross-thread connection reuse by default; the async driver
     # legitimately hands connections between threads in its executor pool.
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False} if _IS_SQLITE else {},
+    # NullPool for SQLite: open a connection per checkout and close it on release.
+    #
+    # This is a correctness fix, not a tuning choice. A pooled aiosqlite
+    # connection that outlives its session is terminated by the pool during
+    # shutdown, and that termination runs through SQLAlchemy's greenlet bridge —
+    # which cannot complete once the event loop is already closing. The process
+    # then hangs on exit instead of stopping. Long-lived WebSocket tasks make
+    # this likely, because they open sessions outside the request lifecycle.
+    #
+    # The cost is negligible here: opening a SQLite connection is cheap, and WAL
+    # mode means concurrency is governed by the file, not by the pool.
+    poolclass=NullPool if _IS_SQLITE else None,
 )
 
 # expire_on_commit=False: without it, every attribute access after commit triggers
@@ -99,6 +114,22 @@ def _configure_sqlite(dbapi_connection: Any, _: Any) -> None:
             cursor.execute("PRAGMA synchronous=FULL")
     finally:
         cursor.close()
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Return the session factory itself, rather than a single session.
+
+    A WebSocket connection lives for minutes or hours, so it cannot hold one
+    session open for its lifetime — that would pin a connection and keep a
+    transaction alive across unrelated work. It instead opens a short session per
+    operation, which means it needs the *factory*.
+
+    Exposed as a dependency rather than imported directly so tests can point the
+    socket at their own database through the same override mechanism the HTTP
+    routes use. Reaching for the module-level factory would make the endpoint
+    untestable by construction.
+    """
+    return SessionFactory
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
