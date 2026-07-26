@@ -1,8 +1,8 @@
 """create core messaging schema
 
-Revision ID: 142cdb1446d6
+Revision ID: 3dc845cef592
 Revises: 
-Created: 2026-07-26 11:07:24.967142+00:00
+Created: 2026-07-26 11:17:13.020792+00:00
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = '142cdb1446d6'
+revision: str = '3dc845cef592'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -28,11 +28,11 @@ def upgrade() -> None:
     sa.Column('avatar_url', sa.String(length=512), nullable=True),
     sa.Column('avatar_color', sa.String(length=16), nullable=False),
     sa.Column('is_online', sa.Boolean(), nullable=False),
-    sa.Column('last_seen_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_seen_at', sa.DateTime(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_users'))
     )
     with op.batch_alter_table('users', schema=None) as batch_op:
@@ -45,8 +45,8 @@ def upgrade() -> None:
     sa.Column('contact_user_id', sa.String(), nullable=False),
     sa.Column('nickname', sa.String(length=64), nullable=True),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['contact_user_id'], ['users.id'], name=op.f('fk_contacts_contact_user_id_users'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], name=op.f('fk_contacts_owner_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_contacts')),
@@ -63,10 +63,10 @@ def upgrade() -> None:
     sa.Column('created_by', sa.String(), nullable=True),
     sa.Column('direct_key', sa.String(length=80), nullable=True),
     sa.Column('disappearing_seconds', sa.Integer(), nullable=False),
-    sa.Column('last_message_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_message_at', sa.DateTime(), nullable=True),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.CheckConstraint("type IN ('direct', 'group')", name=op.f('ck_conversations_conversation_type_valid')),
     sa.CheckConstraint('disappearing_seconds >= 0', name=op.f('ck_conversations_disappearing_seconds_non_negative')),
     sa.ForeignKeyConstraint(['created_by'], ['users.id'], name=op.f('fk_conversations_created_by_users'), ondelete='SET NULL'),
@@ -79,12 +79,12 @@ def upgrade() -> None:
     op.create_table('refresh_tokens',
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('token_hash', sa.String(length=64), nullable=False),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('revoked_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('revoked_at', sa.DateTime(), nullable=True),
     sa.Column('user_agent', sa.String(length=256), nullable=True),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_refresh_tokens_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_refresh_tokens'))
     )
@@ -95,12 +95,12 @@ def upgrade() -> None:
     op.create_table('verification_codes',
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('code', sa.String(length=10), nullable=False),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('consumed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('consumed_at', sa.DateTime(), nullable=True),
     sa.Column('attempts', sa.Integer(), nullable=False),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_verification_codes_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_verification_codes'))
     )
@@ -118,12 +118,12 @@ def upgrade() -> None:
     sa.Column('system_meta', sa.JSON(), nullable=True),
     sa.Column('reply_to_message_id', sa.String(), nullable=True),
     sa.Column('client_message_id', sa.String(length=64), nullable=True),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('edited_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('expires_at', sa.DateTime(), nullable=True),
+    sa.Column('edited_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.CheckConstraint("type IN ('text', 'media', 'system')", name=op.f('ck_messages_message_type_valid')),
     sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], name=op.f('fk_messages_conversation_id_conversations'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['reply_to_message_id'], ['messages.id'], name=op.f('fk_messages_reply_to_message_id_messages'), ondelete='SET NULL'),
@@ -147,8 +147,8 @@ def upgrade() -> None:
     sa.Column('width', sa.Integer(), nullable=True),
     sa.Column('height', sa.Integer(), nullable=True),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.CheckConstraint('size_bytes >= 0', name=op.f('ck_attachments_attachment_size_non_negative')),
     sa.ForeignKeyConstraint(['message_id'], ['messages.id'], name=op.f('fk_attachments_message_id_messages'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_attachments'))
@@ -160,14 +160,14 @@ def upgrade() -> None:
     sa.Column('conversation_id', sa.String(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('role', sa.String(length=16), nullable=False),
-    sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('left_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('joined_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('left_at', sa.DateTime(), nullable=True),
     sa.Column('last_read_message_id', sa.String(), nullable=True),
     sa.Column('is_muted', sa.Boolean(), nullable=False),
     sa.Column('is_pinned', sa.Boolean(), nullable=False),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.CheckConstraint("role IN ('member', 'admin')", name=op.f('ck_conversation_participants_participant_role_valid')),
     sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], name=op.f('fk_conversation_participants_conversation_id_conversations'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['last_read_message_id'], ['messages.id'], name=op.f('fk_conversation_participants_last_read_message_id_messages'), ondelete='SET NULL'),
@@ -184,8 +184,8 @@ def upgrade() -> None:
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('emoji', sa.String(length=16), nullable=False),
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['message_id'], ['messages.id'], name=op.f('fk_message_reactions_message_id_messages'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_message_reactions_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_message_reactions')),
@@ -198,8 +198,8 @@ def upgrade() -> None:
     op.create_table('message_receipts',
     sa.Column('message_id', sa.String(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
-    sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('delivered_at', sa.DateTime(), nullable=True),
+    sa.Column('read_at', sa.DateTime(), nullable=True),
     sa.Column('id', sa.String(), nullable=False),
     sa.ForeignKeyConstraint(['message_id'], ['messages.id'], name=op.f('fk_message_receipts_message_id_messages'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_message_receipts_user_id_users'), ondelete='CASCADE'),

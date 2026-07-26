@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Index, String
+from sqlalchemy import Boolean, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.types import UTCDateTime
 
 if TYPE_CHECKING:  # pragma: no cover - import cycle guard for type checking only
     from app.models.contact import Contact
@@ -42,7 +43,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Presence. `is_online` reflects whether a live WebSocket connection exists and
     # is reset on shutdown; `last_seen_at` is the durable value shown when offline.
     is_online: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -19,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.types import UTCDateTime
 from app.models.enums import ConversationType, ParticipantRole
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -64,7 +64,7 @@ class Conversation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # every load; without it each render would need a correlated subquery across
     # the whole message table. Written in the same transaction as the message, so
     # it cannot drift out of step.
-    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_message_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     participants: Mapped[list[ConversationParticipant]] = relationship(
         "ConversationParticipant",
@@ -127,11 +127,11 @@ class ConversationParticipant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
+        UTCDateTime, nullable=False, server_default=func.now()
     )
     # Set instead of deleting the row, so historical messages keep a resolvable
     # sender and the transcript does not develop holes when someone leaves.
-    left_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    left_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     # Read watermark: the newest message this member has read. Unread count is
     # derived from it. A stored counter would be denormalised state that drifts

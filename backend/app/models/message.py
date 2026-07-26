@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     JSON,
     CheckConstraint,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -19,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.types import UTCDateTime
 from app.models.enums import MessageType, SystemEvent
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -80,13 +80,11 @@ class Message(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # --- Lifecycle --------------------------------------------------------
     # Set when a disappearing message is first delivered, not when it is created:
     # the timer should start once it can actually be read.
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
-    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+    edited_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     # Soft delete, so the client can render a "this message was deleted" tombstone
     # and the surrounding receipt history stays intact.
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     # --- Relationships ----------------------------------------------------
     conversation: Mapped[Conversation] = relationship("Conversation", back_populates="messages")
@@ -150,8 +148,8 @@ class MessageReceipt(UUIDPrimaryKeyMixin, Base):
     )
     # Covered by ix_receipts_user_read as its leftmost prefix.
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     message: Mapped[Message] = relationship("Message", back_populates="receipts")
     user: Mapped[User] = relationship("User")

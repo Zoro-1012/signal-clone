@@ -15,6 +15,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
+from app.db.types import UTCDateTime
 
 # Importing the models package registers every mapper on Base.metadata, which is
 # what autogenerate diffs the live database against.
@@ -29,9 +30,29 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def _render_item(type_: str, obj: object, autogen_context: object) -> str | bool:
+    """Render custom column types using their underlying SQLAlchemy type.
+
+    Autogenerate would otherwise emit ``app.db.types.UTCDateTime()`` into the
+    migration, which fails with a NameError because migrations import only
+    ``sqlalchemy`` — and, more importantly, would couple a historical migration to
+    application code that may be refactored or deleted later.
+
+    ``UTCDateTime`` is a Python-side conversion over a plain DateTime column: the
+    emitted DDL is identical either way, so rendering the impl is both correct and
+    keeps migrations self-contained.
+
+    Returning False delegates to Alembic's default rendering for everything else.
+    """
+    if type_ == "type" and isinstance(obj, UTCDateTime):
+        return "sa.DateTime()"
+    return False
+
+
 def _common_options() -> dict[str, object]:
     return {
         "target_metadata": target_metadata,
+        "render_item": _render_item,
         # SQLite cannot ALTER most things in place. Batch mode rebuilds the table
         # and copies the data instead, which is what makes column and constraint
         # changes possible at all on this database.
