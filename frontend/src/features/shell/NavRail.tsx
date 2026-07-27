@@ -47,13 +47,20 @@ export function NavRail({ user, unreadTotal }: NavRailProps) {
             title={label}
             onClick={() => setNavTab(id)}
             className={cn(
-              "relative flex h-12 w-12 items-center justify-center rounded-xl transition-colors",
+              // Signal marks the selected tab with a rounded pill and a solid
+              // glyph. Two signals rather than one: the fill survives at a glance
+              // and in high contrast, where a subtle background does not.
+              "relative flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
               active
                 ? "bg-surface-active text-content-primary"
                 : "text-content-secondary hover:bg-surface-hover",
             )}
           >
-            <Icon className="h-6 w-6" strokeWidth={active ? 2.25 : 1.75} />
+            <Icon
+              className="h-6 w-6"
+              strokeWidth={active ? 2 : 1.75}
+              fill={active ? "currentColor" : "none"}
+            />
             {badge > 0 && (
               <span className="absolute right-1.5 top-1.5 min-w-[18px] rounded-full bg-signal-red px-1 text-[11px] font-semibold leading-[18px] text-white">
                 {badge > 99 ? "99+" : badge}
@@ -72,13 +79,17 @@ export function NavRail({ user, unreadTotal }: NavRailProps) {
         title="Settings"
         onClick={() => setNavTab("settings")}
         className={cn(
-          "flex h-12 w-12 items-center justify-center rounded-xl transition-colors",
+          "flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
           navTab === "settings"
             ? "bg-surface-active text-content-primary"
             : "text-content-secondary hover:bg-surface-hover",
         )}
       >
-        <Settings className="h-6 w-6" strokeWidth={1.75} />
+        <Settings
+          className="h-6 w-6"
+          strokeWidth={navTab === "settings" ? 2 : 1.75}
+          fill={navTab === "settings" ? "currentColor" : "none"}
+        />
       </button>
 
       <button
