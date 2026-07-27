@@ -19,13 +19,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import io
+
+from PIL import ImageDraw, ImageFont
 from sqlalchemy import delete, select
 
 from app.core.avatars import pick_avatar_color
+from app.core.config import settings
 from app.core.encryption import cipher
 from app.db.base import Base
 from app.db.session import SessionFactory, engine
 from app.models import (
+    Attachment,
     Contact,
     Conversation,
     ConversationParticipant,
@@ -42,6 +47,7 @@ from app.models.enums import (
     ParticipantRole,
     SystemEvent,
 )
+from app.services.storage import storage
 
 # Deterministic, so re-seeding produces the same demo every time and a reviewer
 # following the README sees exactly what it describes.
@@ -127,6 +133,7 @@ async def _wipe() -> None:
     """Delete seeded data. Order respects foreign keys."""
     async with SessionFactory() as session:
         for model in (
+            Attachment,
             MessageReaction,
             MessageReceipt,
             Message,
@@ -139,6 +146,16 @@ async def _wipe() -> None:
         ):
             await session.execute(delete(model))
         await session.commit()
+
+    # Attachment rows and the files they point at are two halves of one record.
+    # Clearing only the rows leaves orphans on disk, and because the seeder runs
+    # on every boot of the demo deployment, those orphans accumulate forever.
+    import shutil
+
+    if settings.upload_dir.exists():
+        shutil.rmtree(settings.upload_dir)
+    settings.upload_dir.mkdir(parents=True, exist_ok=True)
+
     print("Existing data cleared.")
 
 
@@ -149,6 +166,136 @@ def _sealed(body: str) -> dict[str, str]:
         "encryption_key_id": envelope.key_id,
         "encryption_algorithm": envelope.algorithm,
     }
+
+
+# Seeded media --------------------------------------------------------------
+#
+# The demo needs images in the transcript for the attachment UI to mean anything,
+# but committing binaries into the repository to achieve that is a poor trade:
+# they bloat clones and go stale. They are drawn instead, so the seed stays a
+# few hundred bytes of code and reproduces byte-for-byte on any machine.
+
+SEED_PHOTOS: list[tuple[str, str, str, tuple[int, int, int], tuple[int, int, int]]] = [
+    ("beach-sunset.png", "landscape", "Palolem, 6:41pm", (252, 168, 96), (74, 40, 92)),
+    ("hillside.png", "landscape", "Western Ghats", (150, 199, 188), (24, 56, 66)),
+    ("whiteboard.png", "board", "Sprint plan", (244, 246, 249), (206, 212, 222)),
+]
+
+
+def _font(size: int) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
+    """Best available truetype face, falling back to PIL's bitmap font."""
+    for candidate in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+    ):
+        if Path(candidate).exists():
+            return ImageFont.truetype(candidate, size)
+    return ImageFont.load_default()
+
+
+def _gradient(
+    draw: ImageDraw.ImageDraw,
+    width: int,
+    height: int,
+    top: tuple[int, int, int],
+    bottom: tuple[int, int, int],
+) -> None:
+    """Fill the canvas with a vertical two-stop gradient, one scanline at a time."""
+    for y in range(height):
+        blend = y / height
+        draw.line(
+            [(0, y), (width, y)],
+            fill=tuple(
+                round(top[channel] + (bottom[channel] - top[channel]) * blend)
+                for channel in range(3)
+            ),
+        )
+
+
+def _draw_photo(
+    style: str,
+    label: str,
+    top: tuple[int, int, int],
+    bottom: tuple[int, int, int],
+    width: int = 960,
+    height: int = 640,
+) -> bytes:
+    """Render a plausible photograph or whiteboard shot.
+
+    Not a test card: at thumbnail size these read as real images, which is what
+    the transcript needs in order to look like a conversation rather than a
+    fixture. Drawing them keeps binaries out of the repository — the seed stays
+    a few hundred bytes of code and reproduces identically on any machine.
+    """
+    from PIL import Image, ImageFilter
+
+    image = Image.new("RGB", (width, height), top)
+    draw = ImageDraw.Draw(image)
+
+    if style == "board":
+        # A whiteboard: ruled columns with sticky notes, shot slightly off-square.
+        _gradient(draw, width, height, top, bottom)
+        draw.rectangle([40, 36, width - 40, height - 36], outline=(178, 186, 198), width=3)
+        for column in range(3):
+            x = 90 + column * ((width - 200) // 3)
+            draw.text(
+                (x, 80), ["TODO", "DOING", "DONE"][column], font=_font(26), fill=(84, 96, 112)
+            )
+            for row in range(3 - column):
+                y = 130 + row * 90
+                draw.rounded_rectangle(
+                    [x - 10, y, x + 190, y + 70],
+                    radius=8,
+                    fill=[(255, 226, 138), (183, 220, 255), (198, 240, 205)][column],
+                )
+    else:
+        # Sky, sun, layered ridges, water. Layering is what sells the depth.
+        _gradient(draw, width, height, top, bottom)
+        sun_y = int(height * 0.46)
+        radius = int(height * 0.11)
+        draw.ellipse(
+            [width // 2 - radius, sun_y - radius, width // 2 + radius, sun_y + radius],
+            fill=(255, 240, 205),
+        )
+        horizon = int(height * 0.58)
+        # Three ridges, each lighter and higher than the last. The overlap is
+        # what reads as aerial perspective rather than as flat bands.
+        for depth, mix in enumerate((0.45, 0.3, 0.15)):
+            ridge = [
+                (0, horizon + depth * 26),
+                (width * 0.22, horizon - 40 + depth * 30),
+                (width * 0.45, horizon + 10 + depth * 26),
+                (width * 0.7, horizon - 55 + depth * 34),
+                (width, horizon + depth * 22),
+                (width, height),
+                (0, height),
+            ]
+            draw.polygon(
+                ridge,
+                fill=tuple(
+                    round(bottom[channel] * (1 - mix) + top[channel] * mix * 0.5)
+                    for channel in range(3)
+                ),
+            )
+        image = image.filter(ImageFilter.SMOOTH)
+        draw = ImageDraw.Draw(image)
+
+    caption = _font(28)
+    box = draw.textbbox((0, 0), label, font=caption)
+    draw.rectangle(
+        [24, height - 76, 24 + (box[2] - box[0]) + 32, height - 24],
+        fill=(0, 0, 0) if style != "board" else (255, 255, 255),
+    )
+    draw.text(
+        (40, height - 64),
+        label,
+        font=caption,
+        fill=(255, 255, 255) if style != "board" else (60, 68, 82),
+    )
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 async def seed() -> None:
@@ -228,6 +375,61 @@ async def seed() -> None:
                 conversation.last_message_at = last.created_at
             return last
 
+        async def add_media_message(
+            conversation: Conversation,
+            author: str,
+            hours_ago: float,
+            body: str,
+            photos: list[int],
+            members: list[User],
+        ) -> Message:
+            """Append a message carrying one or more rendered images."""
+            created = _at(hours_ago)
+            message = Message(
+                conversation_id=conversation.id,
+                sender_id=users[author].id,
+                type=MessageType.MEDIA,
+                created_at=created,
+                updated_at=created,
+                **_sealed(body),
+            )
+            session.add(message)
+            await session.flush()
+
+            for index in photos:
+                name, style, label, top, bottom = SEED_PHOTOS[index]
+                data = _draw_photo(style, label, top, bottom)
+                key = await storage.save(data, filename=name, content_type="image/png")
+                session.add(
+                    Attachment(
+                        message_id=message.id,
+                        file_name=name,
+                        content_type="image/png",
+                        size_bytes=len(data),
+                        storage_key=key,
+                        width=960,
+                        height=640,
+                        created_at=created,
+                        updated_at=created,
+                    )
+                )
+
+            for member in members:
+                if member.id == message.sender_id:
+                    continue
+                session.add(
+                    MessageReceipt(
+                        message_id=message.id,
+                        user_id=member.id,
+                        delivered_at=created + timedelta(seconds=2),
+                        read_at=created + timedelta(minutes=1),
+                    )
+                )
+
+            if conversation.last_message_at is None or created > conversation.last_message_at:
+                conversation.last_message_at = created
+            return message
+
         # --- Direct conversations ----------------------------------------
         for username, script in DIRECT_SCRIPTS.items():
             other = users[username]
@@ -247,6 +449,15 @@ async def seed() -> None:
                 ]
             )
             await add_messages(conversation, script, [owner, other])
+            if username == "meera":
+                await add_media_message(
+                    conversation,
+                    "meera",
+                    3,
+                    "Look at this view!",
+                    [1],
+                    [owner, other],
+                )
 
         # --- Group: Goa Trip ---------------------------------------------
         goa_members = [owner, users["ananya"], users["rohan"], users["meera"]]
@@ -281,6 +492,16 @@ async def seed() -> None:
             )
         )
         last_goa = await add_messages(goa, GROUP_SCRIPT, goa_members)
+
+        # Photos in the group, so attachments are visible on first load.
+        await add_media_message(
+            goa,
+            "ananya",
+            8,
+            "Sunset from the shack last night 🌅",
+            [0, 1],
+            goa_members,
+        )
 
         # A couple of reactions on the most recent group message.
         if last_goa is not None:
@@ -320,6 +541,14 @@ async def seed() -> None:
             )
         )
         await add_messages(study, STUDY_SCRIPT, study_members)
+        await add_media_message(
+            study,
+            "kabir",
+            5,
+            "Whiteboard from today's session",
+            [2],
+            study_members,
+        )
 
         await session.commit()
 
