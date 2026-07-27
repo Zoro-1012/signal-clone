@@ -1,13 +1,12 @@
 "use client";
 
-import { Phone, Settings, SquareStack } from "lucide-react";
+import { Phone, SquareStack } from "lucide-react";
 
 import type { NavTab } from "@/stores/ui";
 
-const CONTENT: Record<
-  Exclude<NavTab, "chats">,
-  { title: string; body: string; Icon: typeof Phone }
-> = {
+type PlaceholderTab = Exclude<NavTab, "chats" | "settings">;
+
+const CONTENT: Record<PlaceholderTab, { title: string; body: string; Icon: typeof Phone }> = {
   calls: {
     title: "Calls",
     body: "Voice and video calling is not part of this build. The brief scopes it as a placeholder.",
@@ -18,11 +17,6 @@ const CONTENT: Record<
     body: "Stories are not part of this build. The brief scopes them as a placeholder.",
     Icon: SquareStack,
   },
-  settings: {
-    title: "Settings",
-    body: "Appearance, privacy and notification settings are coming next.",
-    Icon: Settings,
-  },
 };
 
 /**
@@ -31,7 +25,7 @@ const CONTENT: Record<
  * Deliberately not a blank pane or a dead link: an unstyled gap reads as an
  * unfinished feature, whereas this reads as a scoped decision.
  */
-export function ComingSoon({ tab }: { tab: Exclude<NavTab, "chats"> }) {
+export function ComingSoon({ tab }: { tab: PlaceholderTab }) {
   const { title, body, Icon } = CONTENT[tab];
   return (
     <div className="flex h-full flex-1 flex-col items-center justify-center gap-3 px-8 text-center">

@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import { ConversationList } from "@/features/conversations/ConversationList";
 import { ChatPane } from "@/features/messages/ChatPane";
+import { NewChatModal } from "@/features/conversations/NewChatModal";
+import { SettingsPane } from "@/features/settings/SettingsPane";
 import {
   useConversationRealtime,
   useConversations,
@@ -29,7 +31,7 @@ export function AppShell({ user }: AppShellProps) {
   const navTab = useUi((s) => s.navTab);
   const mobilePane = useUi((s) => s.mobilePane);
   const activeId = useUi((s) => s.activeConversationId);
-  const [, setNewChatOpen] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
 
   useConversationRealtime();
 
@@ -76,9 +78,13 @@ export function AppShell({ user }: AppShellProps) {
             )}
           </div>
         </>
+      ) : navTab === "settings" ? (
+        <SettingsPane user={user} />
       ) : (
         <ComingSoon tab={navTab} />
       )}
+
+      <NewChatModal open={newChatOpen} onOpenChange={setNewChatOpen} />
     </div>
   );
 }
