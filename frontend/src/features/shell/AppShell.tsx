@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ConversationList } from "@/features/conversations/ConversationList";
 import { ChatPane } from "@/features/messages/ChatPane";
@@ -17,6 +17,7 @@ import { useUi } from "@/stores/ui";
 
 import { ComingSoon } from "./ComingSoon";
 import { NavRail } from "./NavRail";
+import { useGlobalShortcuts } from "./useGlobalShortcuts";
 
 interface AppShellProps {
   user: UserPrivate;
@@ -36,6 +37,7 @@ export function AppShell({ user }: AppShellProps) {
   const [newChatOpen, setNewChatOpen] = useState(false);
 
   useConversationRealtime();
+  useGlobalShortcuts({ onNewChat: useCallback(() => setNewChatOpen(true), []) });
 
   const { data } = useConversations("");
   const conversations = useMemo(() => data ?? [], [data]);

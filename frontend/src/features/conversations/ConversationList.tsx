@@ -20,6 +20,8 @@ import { cn } from "@/lib/cn";
 import type { UserPrivate } from "@/lib/types";
 import { useUi } from "@/stores/ui";
 
+import { SEARCH_INPUT_ID } from "@/features/shell/useGlobalShortcuts";
+
 import { ConversationRow } from "./ConversationRow";
 import { useConversations } from "./queries";
 
@@ -130,6 +132,7 @@ export function ConversationList({ user, onNewChat }: ConversationListProps) {
             aria-hidden="true"
           />
           <input
+            id={SEARCH_INPUT_ID}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
