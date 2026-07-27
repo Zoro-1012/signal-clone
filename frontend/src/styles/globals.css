@@ -158,25 +158,22 @@
 }
 
 @layer components {
-  /* Message bubble tails. Signal squares off the corner nearest the tail and
-     leaves the other three fully rounded; grouped messages square the vertical
-     edge so a run reads as one block. */
-  .bubble-incoming {
-    border-radius: var(--bubble-radius);
-    border-bottom-left-radius: var(--bubble-radius-grouped);
-  }
+  /* Bubble geometry.
+   *
+   * Signal Desktop draws fully rounded bubbles with no tail — checked against
+   * the reference screenshots rather than assumed. Only the inner edge of a
+   * grouped run is tightened, which is what makes a burst read as one block
+   * without introducing a pointer the real client does not have. */
+  .bubble-incoming,
   .bubble-outgoing {
     border-radius: var(--bubble-radius);
-    border-bottom-right-radius: var(--bubble-radius-grouped);
   }
   .bubble-grouped-incoming {
     border-radius: var(--bubble-radius);
     border-top-left-radius: var(--bubble-radius-grouped);
-    border-bottom-left-radius: var(--bubble-radius-grouped);
   }
   .bubble-grouped-outgoing {
     border-radius: var(--bubble-radius);
     border-top-right-radius: var(--bubble-radius-grouped);
-    border-bottom-right-radius: var(--bubble-radius-grouped);
   }
 }

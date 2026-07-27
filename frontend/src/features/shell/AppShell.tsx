@@ -58,7 +58,10 @@ export function AppShell({ user }: AppShellProps) {
         <>
           <div
             className={cn(
-              "h-full w-full md:block",
+              // w-full is for mobile, where the list is the whole screen. It must
+              // be released at md, or the list occupies 100% of the row and the
+              // flex-1 chat pane is pushed entirely off the viewport.
+              "h-full w-full shrink-0 md:block md:w-auto",
               mobilePane === "chat" ? "hidden" : "block",
             )}
           >

@@ -55,3 +55,7 @@ Thumbs.db
 # Frontend build output
 frontend/.next/
 frontend/out/
+
+# Reference material (Signal's own assets — reference only, never vendored)
+Signal App Screens Desktop/
+Signal Logo/
