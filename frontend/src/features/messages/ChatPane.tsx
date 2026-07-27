@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, MoreVertical, Phone, Search, Users, Video } from "lucide-react";
+import { ArrowLeft, MoreVertical, Phone, Search, Timer, Users, Video } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
@@ -10,6 +10,7 @@ import { realtime, type Frame } from "@/lib/ws";
 import { useUi } from "@/stores/ui";
 
 import { GroupInfoPanel } from "@/features/groups/GroupInfoPanel";
+import { DisappearingTimerMenu, timerLabel } from "./DisappearingTimer";
 import { useToast } from "@/components/ui/Toast";
 
 import { Composer } from "./Composer";
@@ -115,13 +116,14 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
     .map((id) => conversation.participants.find((p) => p.user.id === id)?.user.display_name)
     .filter((name): name is string => Boolean(name));
 
-  function handleSend(body: string) {
+  function handleSend(body: string, attachmentIds: string[] = []) {
     sendMessage.mutate(
       {
         conversationId: conversation.id,
         body,
         replyToId: replyTo?.id ?? null,
         clientMessageId: crypto.randomUUID(),
+        attachmentIds,
       },
       {
         onError: () => toast.error("Message failed to send. Check your connection."),
@@ -181,6 +183,7 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
               <Users className="h-5 w-5" strokeWidth={1.75} />
             </button>
           )}
+          <DisappearingTimerMenu conversation={conversation} />
           {[
             { Icon: Video, label: "Video call" },
             { Icon: Phone, label: "Voice call" },
@@ -199,6 +202,13 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
           ))}
         </div>
       </header>
+
+      {conversation.disappearing_seconds > 0 && (
+        <div className="flex shrink-0 items-center justify-center gap-2 border-b border-edge-subtle bg-surface-hover px-4 py-1.5 text-xs text-content-secondary">
+          <Timer className="h-3.5 w-3.5" />
+          Messages disappear after {timerLabel(conversation.disappearing_seconds).toLowerCase()}
+        </div>
+      )}
 
       <div
         ref={scrollRef}
@@ -332,7 +342,7 @@ function systemText(message: Message): string {
     case "disappearing_timer_changed": {
       const seconds = Number(message.system_meta?.seconds ?? 0);
       return seconds > 0
-        ? `Disappearing messages set to ${seconds}s`
+        ? `Disappearing messages set to ${timerLabel(seconds).toLowerCase()}`
         : "Disappearing messages turned off";
     }
     default:
