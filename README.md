@@ -471,8 +471,9 @@ Stated plainly, so they read as decisions rather than gaps.
 6. **Rate limiting covers OTP attempts only.** Adequate for a demo, not for production.
 7. **Message search decrypts in Python** and is therefore bounded rather than indexed —
    the honest cost of storing ciphertext.
-8. **Signal's visual language is reconstructed** from its published design. No Signal code,
-   assets or trademarks are vendored.
+8. **Signal's visual language is reproduced deliberately** — palette, iconography and the
+   official logo mark, which is vendored under `frontend/public/`. No Signal source code
+   is used. See [Attribution](#attribution).
 
 ---
 
