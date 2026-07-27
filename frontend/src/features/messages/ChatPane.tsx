@@ -305,12 +305,21 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
 
       <TypingIndicator names={typingNames} />
 
-      <Composer
-        conversationId={conversation.id}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        onSend={handleSend}
-      />
+      {conversation.is_active_member ? (
+        <Composer
+          conversationId={conversation.id}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onSend={handleSend}
+        />
+      ) : (
+        // Removed members keep the conversation and its history, so the pane
+        // still renders — but every write would be rejected, and offering a
+        // composer that cannot send is worse than offering none.
+        <div className="border-t border-edge-subtle bg-surface-panel px-4 py-4 text-center text-sm text-content-secondary">
+          You are no longer a member of this group.
+        </div>
+      )}
 
       {isGroup && (
         <GroupInfoPanel

@@ -60,6 +60,7 @@ export function DisappearingTimerMenu({ conversation }: { conversation: Conversa
     onError: () => toast.error("Could not update the disappearing message timer."),
   });
 
+  if (!conversation.is_active_member) return null;
   if (conversation.type === "group" && conversation.my_role !== "admin") return null;
 
   return (

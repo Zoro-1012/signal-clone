@@ -50,13 +50,32 @@ class ConversationService:
     async def require_participation(
         self, conversation_id: str, user: User
     ) -> ConversationParticipant:
-        """Assert the caller is an active member, and return their membership.
+        """Assert the caller is an *active* member, and return their membership.
 
         Raises NotFound rather than Forbidden for a conversation the caller is not
         in: telling them it exists would leak the existence of other people's
         conversations to anyone willing to guess identifiers.
+
+        Every write goes through here. Someone who has left, or been removed,
+        fails it — they keep the history (see ``require_readable``) but cannot
+        add to it.
         """
         participation = await self.conversations.get_participation(conversation_id, user.id)
+        if participation is None:
+            raise NotFoundError("That conversation does not exist.")
+        return participation
+
+    async def require_readable(self, conversation_id: str, user: User) -> ConversationParticipant:
+        """Assert the caller was ever a member, active or not.
+
+        Reads are permitted to former members so a removed person keeps the
+        conversation they were part of. What they may see is still bounded:
+        ``visible_until`` caps the transcript at the moment they left, so a
+        group cannot keep broadcasting to someone it has removed.
+        """
+        participation = await self.conversations.get_participation(
+            conversation_id, user.id, include_left=True
+        )
         if participation is None:
             raise NotFoundError("That conversation does not exist.")
         return participation
@@ -88,7 +107,10 @@ class ConversationService:
             return []
 
         ids = [conversation.id for conversation in conversations]
-        participants = await self.conversations.list_participants(ids, include_left=False)
+        # Departed members are loaded too: the list now includes conversations
+        # the viewer has left, and their own row is the only place the viewer's
+        # role and membership state can be read from.
+        participants = await self.conversations.list_participants(ids, include_left=True)
         latest = await self.conversations.latest_messages(ids)
         unread = await self.conversations.unread_counts(user.id, ids)
 
@@ -104,7 +126,9 @@ class ConversationService:
             self._assemble(
                 conversation,
                 viewer=user,
-                participants=participants.get(conversation.id, []),
+                participants=[
+                    p for p in participants.get(conversation.id, []) if p.left_at is None
+                ],
                 mine=my_participation[conversation.id],
                 last_message=latest.get(conversation.id),
                 unread_count=unread.get(conversation.id, 0),
@@ -113,7 +137,7 @@ class ConversationService:
         ]
 
     async def get_conversation(self, user: User, conversation_id: str) -> ConversationRead:
-        await self.require_participation(conversation_id, user)
+        await self.require_readable(conversation_id, user)
         conversation = await self.conversations.get(conversation_id)
         if conversation is None:
             raise NotFoundError("That conversation does not exist.")
@@ -124,6 +148,7 @@ class ConversationService:
         latest = await self.conversations.latest_messages([conversation_id])
         unread = await self.conversations.unread_counts(user.id, [conversation_id])
         mine = next((p for p in participants if p.user_id == user.id), None)
+        participants = [p for p in participants if p.left_at is None]
 
         return self._assemble(
             conversation,
@@ -185,6 +210,10 @@ class ConversationService:
             is_muted=mine.is_muted if mine else False,
             is_pinned=mine.is_pinned if mine else False,
             my_role=mine.role if mine else ParticipantRole.MEMBER,
+            # False once the viewer has left or been removed. The conversation
+            # stays in their list, read-only, so the client needs to know which
+            # of the two it is rather than inferring it from the member list.
+            is_active_member=mine is not None and mine.left_at is None,
         )
 
     @staticmethod

@@ -166,7 +166,105 @@ class TestGroups:
             f"/api/v1/conversations/{group['id']}/participants/{bob.id}", headers=bob.headers
         )
         assert response.status_code == 204
-        assert client.get("/api/v1/conversations", headers=bob.headers).json() == []
+        # Bob keeps the conversation; he is simply no longer an active member.
+        mine = client.get("/api/v1/conversations", headers=bob.headers).json()
+        assert [c["id"] for c in mine] == [group["id"]]
+        assert mine[0]["is_active_member"] is False
+        assert bob.id not in [p["user"]["id"] for p in mine[0]["participants"]]
+
+
+class TestDepartedMembers:
+    """Removal ends participation, not memory.
+
+    Dropping the conversation from someone's list because a third party clicked
+    a button is data loss dressed as permission enforcement. Signal keeps the
+    thread, read-only — so the rule is that reads survive and writes do not.
+    """
+
+    def _removed_bob(self, client: Any) -> tuple[Any, Any, dict[str, Any]]:
+        alice, bob, _ = _cast(client)
+        group = client.post(
+            "/api/v1/conversations/group",
+            json={"name": "Team", "member_ids": [bob.id]},
+            headers=alice.headers,
+        ).json()
+        client.post(
+            f"/api/v1/conversations/{group['id']}/messages",
+            json={"body": "before the removal"},
+            headers=alice.headers,
+        )
+        client.delete(
+            f"/api/v1/conversations/{group['id']}/participants/{bob.id}", headers=alice.headers
+        )
+        return alice, bob, group
+
+    def test_a_removed_member_keeps_the_conversation(self, client: Any) -> None:
+        _, bob, group = self._removed_bob(client)
+        listed = client.get("/api/v1/conversations", headers=bob.headers).json()
+        assert [c["id"] for c in listed] == [group["id"]]
+        assert listed[0]["is_active_member"] is False
+
+    def test_a_removed_member_keeps_the_history_they_saw(self, client: Any) -> None:
+        _, bob, group = self._removed_bob(client)
+        bodies = [
+            m["body"]
+            for m in client.get(
+                f"/api/v1/conversations/{group['id']}/messages", headers=bob.headers
+            ).json()["items"]
+        ]
+        assert "before the removal" in bodies
+
+    def test_a_removed_member_does_not_see_what_came_after(self, client: Any) -> None:
+        """Otherwise removal would leave them subscribed to the group's future."""
+        alice, bob, group = self._removed_bob(client)
+        client.post(
+            f"/api/v1/conversations/{group['id']}/messages",
+            json={"body": "after the removal"},
+            headers=alice.headers,
+        )
+        bodies = [
+            m["body"]
+            for m in client.get(
+                f"/api/v1/conversations/{group['id']}/messages", headers=bob.headers
+            ).json()["items"]
+        ]
+        assert "after the removal" not in bodies
+
+    def test_a_removed_member_cannot_post(self, client: Any) -> None:
+        _, bob, group = self._removed_bob(client)
+        response = client.post(
+            f"/api/v1/conversations/{group['id']}/messages",
+            json={"body": "let me back in"},
+            headers=bob.headers,
+        )
+        assert response.status_code == 404
+
+
+class TestDisappearingTimerAnnouncements:
+    def test_setting_the_timer_to_its_current_value_announces_nothing(
+        self, client: Any
+    ) -> None:
+        """A no-op is not an event; announcing it fills the transcript with noise."""
+        alice, bob, _ = _cast(client)
+        group = client.post(
+            "/api/v1/conversations/group",
+            json={"name": "Team", "member_ids": [bob.id]},
+            headers=alice.headers,
+        ).json()
+
+        def timer_events() -> int:
+            items = client.get(
+                f"/api/v1/conversations/{group['id']}/messages", headers=alice.headers
+            ).json()["items"]
+            return sum(1 for m in items if m["system_event"] == "disappearing_timer_changed")
+
+        for _ in range(3):
+            client.patch(
+                f"/api/v1/conversations/{group['id']}",
+                json={"disappearing_seconds": 30},
+                headers=alice.headers,
+            )
+        assert timer_events() == 1
 
     def test_a_group_is_never_left_without_an_admin(self, client: Any) -> None:
         """The last admin leaving would otherwise make the group unmanageable."""

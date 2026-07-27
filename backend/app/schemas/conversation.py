@@ -64,6 +64,9 @@ class ConversationRead(APIModel):
     is_muted: bool = False
     is_pinned: bool = False
     my_role: ParticipantRole = ParticipantRole.MEMBER
+    # A conversation the viewer has left stays visible and readable but rejects
+    # every write. The client hides the composer rather than letting a send fail.
+    is_active_member: bool = True
 
 
 class DirectConversationCreate(APIModel):

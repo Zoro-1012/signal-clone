@@ -112,16 +112,24 @@ class ConversationRepository(BaseRepository[Conversation]):
         return result.scalar_one_or_none()
 
     def _for_user(self, user_id: str) -> Select[tuple[Conversation]]:
+        """Every conversation the user has ever been a member of.
+
+        Deliberately not filtered on ``left_at``. Being removed from a group
+        ends your ability to participate, not your memory of it: Signal keeps
+        the thread and its history in your list, read-only. Dropping the row
+        would delete a conversation from someone's phone because a third party
+        clicked a button, which is data loss, not permission enforcement.
+
+        Write paths call ``require_participation`` (active-only) instead, so
+        access to read here never implies access to post.
+        """
         return (
             select(Conversation)
             .join(
                 ConversationParticipant,
                 ConversationParticipant.conversation_id == Conversation.id,
             )
-            .where(
-                ConversationParticipant.user_id == user_id,
-                ConversationParticipant.left_at.is_(None),
-            )
+            .where(ConversationParticipant.user_id == user_id)
         )
 
     async def list_for_user(self, user_id: str, *, query: str | None = None) -> list[Conversation]:

@@ -62,6 +62,7 @@ export interface Conversation {
   is_muted: boolean;
   is_pinned: boolean;
   my_role: ParticipantRole;
+  is_active_member: boolean;
 }
 
 export interface Attachment {
