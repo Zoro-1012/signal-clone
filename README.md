@@ -345,9 +345,9 @@ authentication, not authorisation.
 | Reply / quoted messages | Implemented |
 | Dark mode | Implemented (default, with light toggle) |
 | Responsive layout | Implemented (desktop → tablet → mobile) |
-| Attachments | Backend complete (upload, storage interface, traversal-safe); upload UI not wired |
-| Disappearing messages | Backend complete, with a background expiry sweeper; no UI control |
-| Keyboard shortcuts | Enter to send, Shift+Enter for newline |
+| Attachments | Implemented — upload from the composer, inline images with a lightbox, file cards, traversal-safe storage |
+| Disappearing messages | Implemented — per-conversation timer, admin-gated in groups, background expiry sweeper |
+| Keyboard shortcuts | Enter to send, Shift+Enter for newline, Escape to dismiss |
 
 ### Placeholders
 
