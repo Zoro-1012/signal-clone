@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, SmilePlus, Timer, TriangleAlert } from "lucide-react";
+import { SmilePlus, TriangleAlert } from "lucide-react";
 
 import { Avatar } from "@/components/ui/Avatar";
 
@@ -31,71 +31,119 @@ interface MessageBubbleProps {
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const;
 
 /**
- * Delivery state, drawn the way Signal draws it.
+ * Delivery state, traced from Signal's published icon set.
  *
- * A ring holds the ticks: outline with one tick for sent, outline with two for
- * delivered, filled with two for read. Three states that differ in both shape
- * and weight, so they are distinguishable at 14px and without relying on colour
- * alone — bare ticks of the same size read as one smudge at this scale.
- *
- * The value is derived server-side from per-recipient receipts, so in a group it
- * only reaches "read" once everyone has.
+ * Sending is a dotted ring with nothing in it; sent is one solid ring with a
+ * tick; delivered adds a second ring behind the first; read fills them both.
+ * The progression is structural — a ring appears, then a second, then they
+ * fill — so the states stay distinguishable at 14px and without colour, which
+ * a row of bare ticks does not.
  */
 function ReceiptIcon({ status }: { status: Message["status"] }) {
   const shared = "h-3.5 w-3.5 shrink-0";
   switch (status) {
     case "sending":
-      return <Clock className={cn(shared, "opacity-60")} aria-label="Sending" />;
+      return <SendingRing className={shared} aria-label="Sending" />;
     case "failed":
       return <TriangleAlert className={cn(shared, "text-signal-red")} aria-label="Failed to send" />;
     case "delivered":
-      return <RingTicks className={shared} ticks={2} aria-label="Delivered" />;
+      return <TickRings className={shared} doubled aria-label="Delivered" />;
     case "read":
-      return <RingTicks className={shared} ticks={2} filled aria-label="Read" />;
+      return <TickRings className={shared} doubled filled aria-label="Read" />;
     default:
-      return <RingTicks className={shared} ticks={1} aria-label="Sent" />;
+      return <TickRings className={shared} aria-label="Sent" />;
   }
 }
 
-/** The circled check Signal uses for delivery state. */
-function RingTicks({
-  ticks,
-  filled = false,
-  className,
-  ...rest
-}: {
-  ticks: 1 | 2;
-  filled?: boolean;
-  className?: string;
-} & React.SVGProps<SVGSVGElement>) {
+/** The dotted ring Signal shows while a message is still in flight. */
+function SendingRing({ className, ...rest }: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" className={className} role="img" {...rest}>
       <circle
         cx="12"
         cy="12"
-        r="10"
-        fill={filled ? "currentColor" : "none"}
+        r="9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="0.5 4"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Signal's ticked ring, optionally with a second ring behind it.
+ *
+ * The front ring carries a fill even when the icon reads as an outline: it has
+ * to mask the ring behind it, or the two overlap into a figure-of-eight instead
+ * of one disc in front of another.
+ */
+function TickRings({
+  doubled = false,
+  filled = false,
+  className,
+  ...rest
+}: {
+  doubled?: boolean;
+  filled?: boolean;
+  className?: string;
+} & React.SVGProps<SVGSVGElement>) {
+  const mask = "var(--receipt-knockout)";
+  return (
+    <svg viewBox="0 0 24 24" className={className} role="img" {...rest}>
+      {doubled && (
+        <circle
+          cx="8.5"
+          cy="12"
+          r="6.5"
+          fill={filled ? "currentColor" : mask}
+          stroke="currentColor"
+          strokeWidth="1.75"
+        />
+      )}
+      <circle
+        cx={doubled ? 14.5 : 12}
+        cy="12"
+        r="6.5"
+        fill={filled ? "currentColor" : mask}
         stroke="currentColor"
         strokeWidth="1.75"
       />
-      <g
+      <path
+        d={doubled ? "M11.6 12.2l2 2 3.8-4.2" : "M9.1 12.2l2 2 3.8-4.2"}
         fill="none"
-        // On a filled ring the ticks must be knocked out of the fill, so they
-        // take the bubble's background rather than the icon colour.
-        stroke={filled ? "var(--receipt-knockout)" : "currentColor"}
-        strokeWidth="2"
+        stroke={filled ? mask : "currentColor"}
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
-      >
-        {ticks === 1 ? (
-          <path d="M7.5 12.5l3 3 6-6.5" />
-        ) : (
-          <>
-            <path d="M5.5 12.5l3 3 6-6.5" />
-            <path d="M11.5 15.5l6-6.5" />
-          </>
-        )}
-      </g>
+      />
+    </svg>
+  );
+}
+
+/** The dotted ring with a bar that Signal uses to mark a timed message. */
+function DisappearingGlyph({ className, ...rest }: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} role="img" {...rest}>
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="0.5 4"
+      />
+      <path
+        d="M12 7.5v5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -209,11 +257,7 @@ export function MessageBubble({
             >
               {message.edited_at && <span className="italic">edited</span>}
               {message.expires_at && (
-                <Timer
-                  className="h-3 w-3"
-                  aria-label="Disappearing message"
-                  strokeWidth={2.5}
-                />
+                <DisappearingGlyph className="h-3.5 w-3.5" aria-label="Disappearing message" />
               )}
               {messageTime(message.created_at)}
               {isOwn && !deleted && <ReceiptIcon status={message.status} />}
