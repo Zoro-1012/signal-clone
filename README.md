@@ -333,8 +333,9 @@ authentication, not authorisation.
 - **Conversations** — sorted list, search, contacts, unread badges, previews, presence
 - **1:1 messaging** — real-time delivery, timestamps, receipts, typing, status lifecycle
 - **Groups** — creation, membership, admin add/remove, persisted system events
-- **Signal experience** — three-pane shell, bubbles with tails and grouping, date
-  dividers, modals, empty states, placeholder surfaces
+- **Groups** — member list with roles and presence, admin add/remove, leave group
+- **Signal experience** — three-pane shell, bubbles with grouping, date dividers, modals,
+  toasts, empty states, placeholder surfaces
 
 ### Bonus
 
@@ -344,8 +345,8 @@ authentication, not authorisation.
 | Reply / quoted messages | Implemented |
 | Dark mode | Implemented (default, with light toggle) |
 | Responsive layout | Implemented (desktop → tablet → mobile) |
-| Attachments | Backend complete; upload UI pending |
-| Disappearing messages | Backend complete, with expiry sweeper |
+| Attachments | Backend complete (upload, storage interface, traversal-safe); upload UI not wired |
+| Disappearing messages | Backend complete, with a background expiry sweeper; no UI control |
 | Keyboard shortcuts | Enter to send, Shift+Enter for newline |
 
 ### Placeholders
