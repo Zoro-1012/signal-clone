@@ -14,7 +14,10 @@ import { DisappearingTimerMenu, timerLabel } from "./DisappearingTimer";
 import { useToast } from "@/components/ui/Toast";
 
 import { Composer } from "./Composer";
+import { EditMessageModal } from "./EditMessageModal";
+import { ForwardModal } from "./ForwardModal";
 import { MessageBubble } from "./MessageBubble";
+import { MessageInfoModal } from "./MessageInfoModal";
 import { TypingIndicator } from "./TypingIndicator";
 import {
   useDeleteMessage,
@@ -39,6 +42,10 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const [forwarding, setForwarding] = useState<Message | null>(null);
+  const [editing, setEditing] = useState<Message | null>(null);
+  const [inspecting, setInspecting] = useState<Message | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const toast = useToast();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -115,6 +122,28 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
   const typingNames = typingUserIds
     .map((id) => conversation.participants.find((p) => p.user.id === id)?.user.display_name)
     .filter((name): name is string => Boolean(name));
+
+  /**
+   * Scroll a quoted message into view and flash it.
+   *
+   * Only works for messages already loaded — older history is paginated, and
+   * chasing an arbitrary message would mean fetching pages until it appears.
+   * When it is not on screen we say so rather than doing nothing, because a
+   * click that produces no visible effect reads as a broken control.
+   */
+  const jumpToMessage = useCallback(
+    (messageId: string) => {
+      const node = document.getElementById(`message-${messageId}`);
+      if (!node) {
+        toast.info("Scroll up to load the quoted message.");
+        return;
+      }
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedId(messageId);
+      window.setTimeout(() => setHighlightedId(null), 1600);
+    },
+    [toast],
+  );
 
   function handleSend(body: string, attachmentIds: string[] = []) {
     sendMessage.mutate(
@@ -273,7 +302,7 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
           const needsDivider = !previous || !sameDay(previous.created_at, message.created_at);
 
           return (
-            <div key={message.id}>
+            <div key={message.id} id={`message-${message.id}`}>
               {needsDivider && (
                 <div className="my-4 flex items-center justify-center">
                   <span className="rounded-full bg-surface-hover px-3 py-1 text-xs font-medium text-content-secondary">
@@ -289,12 +318,20 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
                 tail={tail}
                 onReact={(messageId, emoji) => toggleReaction.mutate({ messageId, emoji })}
                 onReply={setReplyTo}
-                onDelete={(messageId) =>
-                  deleteMessage.mutate(messageId, {
-                    onSuccess: () => toast.success("Message deleted."),
-                    onError: () => toast.error("Could not delete that message."),
-                  })
-                }
+                onJumpToQuoted={jumpToMessage}
+                highlighted={highlightedId === message.id}
+                actions={{
+                  onForward: setForwarding,
+                  onEdit: setEditing,
+                  onInfo: setInspecting,
+                  onDelete: isOwn
+                    ? (messageId) =>
+                        deleteMessage.mutate(messageId, {
+                          onSuccess: () => toast.success("Message deleted."),
+                          onError: () => toast.error("Could not delete that message."),
+                        })
+                    : undefined,
+                }}
               />
             </div>
           );
@@ -320,6 +357,10 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
           You are no longer a member of this group.
         </div>
       )}
+
+      <ForwardModal message={forwarding} onClose={() => setForwarding(null)} />
+      <EditMessageModal message={editing} onClose={() => setEditing(null)} />
+      <MessageInfoModal message={inspecting} onClose={() => setInspecting(null)} />
 
       {isGroup && (
         <GroupInfoPanel

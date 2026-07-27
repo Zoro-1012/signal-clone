@@ -150,3 +150,17 @@ export interface ApiErrorBody {
     details?: { fields?: { field: string; reason: string }[] };
   };
 }
+
+
+export interface RecipientReceipt {
+  user: UserPublic;
+  delivered_at: string | null;
+  read_at: string | null;
+}
+
+/** Per-recipient detail behind a message's single summary tick. */
+export interface MessageInfo {
+  message_id: string;
+  sent_at: string;
+  recipients: RecipientReceipt[];
+}

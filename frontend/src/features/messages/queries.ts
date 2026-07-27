@@ -3,12 +3,13 @@
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { api } from "@/lib/api";
-import type { CursorPage, Message } from "@/lib/types";
+import type { CursorPage, Message, MessageInfo } from "@/lib/types";
 import { realtime, type Frame } from "@/lib/ws";
 import { conversationKeys } from "@/features/conversations/queries";
 
@@ -162,4 +163,33 @@ export function useReadReceipts(conversationId: string | null, newestMessageId?:
     };
     void run();
   }, [conversationId, newestMessageId, queryClient]);
+}
+
+
+/** Edit a message's body. The server rejects edits to anyone else's. */
+export function useEditMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, body }: { messageId: string; body: string }) =>
+      api.patch<Message>(`/messages/${messageId}`, { body }),
+    onSuccess: (message) => {
+      void queryClient.invalidateQueries({ queryKey: messageKeys.thread(message.conversation_id) });
+      void queryClient.invalidateQueries({ queryKey: conversationKeys.all });
+    },
+  });
+}
+
+/**
+ * Per-recipient delivery detail for one of your own messages.
+ *
+ * Not prefetched: this is the contents of a menu item most messages never have
+ * opened, so it loads when asked for.
+ */
+export function useMessageInfo(messageId: string | null) {
+  return useQuery({
+    queryKey: ["message-info", messageId],
+    queryFn: () => api.get<MessageInfo>(`/messages/${messageId}/info`),
+    enabled: messageId !== null,
+    staleTime: 0,
+  });
 }

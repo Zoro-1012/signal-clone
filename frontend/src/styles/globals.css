@@ -68,6 +68,10 @@
     --bubble-incoming-text: var(--grey-90);
     --bubble-outgoing-bg: var(--signal-ultramarine);
     --bubble-outgoing-text: #ffffff;
+    /* Ticks on a filled receipt ring are knocked out of the fill, so they take
+       the colour behind the icon. Receipts only render on your own messages,
+       so that is always the outgoing bubble. */
+    --receipt-knockout: var(--signal-ultramarine);
 
     /* Layout constants, matching Signal Desktop's proportions. */
     --nav-rail-width: 80px;
@@ -107,6 +111,10 @@
     --bubble-incoming-text: var(--grey-02);
     --bubble-outgoing-bg: var(--signal-ultramarine);
     --bubble-outgoing-text: #ffffff;
+    /* Ticks on a filled receipt ring are knocked out of the fill, so they take
+       the colour behind the icon. Receipts only render on your own messages,
+       so that is always the outgoing bubble. */
+    --receipt-knockout: var(--signal-ultramarine);
 
     color-scheme: dark;
   }
