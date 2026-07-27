@@ -82,6 +82,14 @@ export function NewChatModal({ open, onOpenChange }: NewChatModalProps) {
       setError(err instanceof ApiError ? err.message : "Could not start that chat."),
   });
 
+  /** What is stopping the group from being created, if anything. */
+  const blocker =
+    groupName.trim().length === 0
+      ? "Add a group name to continue"
+      : selected.length === 0
+        ? "Choose at least one member"
+        : null;
+
   const createGroup = useMutation({
     mutationFn: () =>
       api.post<Conversation>("/conversations/group", {
@@ -113,8 +121,11 @@ export function NewChatModal({ open, onOpenChange }: NewChatModalProps) {
       footer={
         mode === "group" ? (
           <div className="flex items-center justify-between gap-3">
+            {/* A disabled button with no stated reason is a dead end: the person
+                sees "4 selected", presses Create, nothing happens, and nothing
+                on screen explains why. Say what is missing instead. */}
             <span className="text-sm text-content-secondary">
-              {selected.length} selected
+              {blocker ?? `${selected.length} selected`}
             </span>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setMode("pick")}>
@@ -123,7 +134,7 @@ export function NewChatModal({ open, onOpenChange }: NewChatModalProps) {
               <Button
                 onClick={() => createGroup.mutate()}
                 loading={createGroup.isPending}
-                disabled={groupName.trim().length === 0 || selected.length === 0}
+                disabled={blocker !== null}
               >
                 Create
               </Button>
@@ -137,9 +148,18 @@ export function NewChatModal({ open, onOpenChange }: NewChatModalProps) {
           <Input
             label="Group name"
             autoFocus
+            required
             placeholder="Weekend plans"
             value={groupName}
             onChange={(event) => setGroupName(event.target.value)}
+            // Only complains once the person has done the other half of the
+            // job, so it reads as the remaining step rather than as an error
+            // on a form they have not filled in yet.
+            error={
+              selected.length > 0 && groupName.trim().length === 0
+                ? "A group needs a name."
+                : undefined
+            }
           />
         </div>
       )}
