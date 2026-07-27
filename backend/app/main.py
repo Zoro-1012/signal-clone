@@ -90,6 +90,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
+        # Matched in addition to the exact list, so preview deployments work
+        # without loosening the production origin.
+        allow_origin_regex=settings.cors_origin_regex,
         allow_credentials=True,  # refresh token travels in an httpOnly cookie
         allow_methods=["*"],
         allow_headers=["*"],

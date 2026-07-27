@@ -104,6 +104,12 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000"]
     )
+    # Every Vercel deployment gets its own hostname, so an exact-match allowlist
+    # only ever covers the production domain and silently blocks every preview -
+    # which fails identically to the server being down and sends you debugging
+    # the wrong thing. A regex covers the whole project without widening the
+    # policy to the open internet, which credentialed CORS forbids anyway.
+    cors_origin_regex: str | None = None
 
     # ---- Real-time -------------------------------------------------------
     ws_heartbeat_seconds: int = 25

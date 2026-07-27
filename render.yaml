@@ -61,3 +61,7 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         sync: false
+      # Vercel gives every deployment its own hostname. Without this, only the
+      # production domain works and every preview build looks broken.
+      - key: CORS_ORIGIN_REGEX
+        value: "https://.*\\.vercel\\.app"
