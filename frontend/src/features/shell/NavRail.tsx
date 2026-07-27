@@ -19,21 +19,40 @@ interface NavRailProps {
 }
 
 /**
- * The 80px icon rail down the left edge.
+ * Primary navigation: an icon rail down the left edge on desktop, a bottom bar
+ * on a phone.
+ *
+ * It used to be `hidden md:flex`, which left a phone with no navigation at all
+ * — Settings, Calls and Stories were unreachable, and the only reason it was
+ * not obviously broken is that the app opens on Chats. A narrow screen cannot
+ * spare 80px of width, so the same tablist reflows to the bottom edge instead
+ * of disappearing.
  *
  * Rendered as a tablist so arrow keys move between tabs and a screen reader
- * announces the selected one — a column of plain buttons would give neither.
+ * announces the selected one — a row of plain buttons would give neither.
  */
 export function NavRail({ user, unreadTotal }: NavRailProps) {
   const navTab = useUi((s) => s.navTab);
   const setNavTab = useUi((s) => s.setNavTab);
+  const mobilePane = useUi((s) => s.mobilePane);
+
+  // Inside a conversation on a phone the bar would sit between the composer and
+  // the edge of the screen, competing with the keyboard for the scarcest space
+  // on the display. Signal hides it there too; the back arrow is the way out.
+  const hiddenOnMobile = mobilePane === "chat" && navTab === "chats";
 
   return (
     <nav
       role="tablist"
       aria-orientation="vertical"
       aria-label="Main navigation"
-      className="hidden w-rail shrink-0 flex-col items-center gap-1 border-r border-edge-subtle bg-surface-panel py-3 md:flex"
+      className={cn(
+        "order-last flex w-full shrink-0 flex-row items-center justify-around gap-1",
+        "border-t border-edge-subtle bg-surface-panel px-2 py-1.5",
+        // Desktop: back to a vertical rail on the left.
+        "md:order-none md:w-rail md:flex-col md:justify-start md:border-r md:border-t-0 md:px-0 md:py-3",
+        hiddenOnMobile && "hidden md:flex",
+      )}
     >
       {TABS.map(({ id, label, Icon }) => {
         const active = navTab === id;
@@ -70,7 +89,7 @@ export function NavRail({ user, unreadTotal }: NavRailProps) {
         );
       })}
 
-      <div className="flex-1" />
+      <div className="hidden flex-1 md:block" />
 
       <button
         role="tab"
@@ -96,7 +115,7 @@ export function NavRail({ user, unreadTotal }: NavRailProps) {
         onClick={() => setNavTab("settings")}
         aria-label="Your profile"
         title={user.display_name}
-        className="mt-1 rounded-full"
+        className="hidden rounded-full md:mt-1 md:block"
       >
         <Avatar name={user.display_name} color={user.avatar_color} src={user.avatar_url} size="sm" />
       </button>

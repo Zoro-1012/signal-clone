@@ -52,7 +52,9 @@ export function AppShell({ user }: AppShellProps) {
   );
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-surface-base">
+    // Column on a phone so the nav bar can take the bottom edge; row on
+    // desktop so the rail takes the left.
+    <div className="flex h-dvh flex-col overflow-hidden bg-surface-base md:flex-row">
       <NavRail user={user} unreadTotal={unreadTotal} />
 
       {navTab === "chats" ? (
@@ -62,7 +64,9 @@ export function AppShell({ user }: AppShellProps) {
               // w-full is for mobile, where the list is the whole screen. It must
               // be released at md, or the list occupies 100% of the row and the
               // flex-1 chat pane is pushed entirely off the viewport.
-              "h-full w-full shrink-0 md:block md:w-auto",
+              // min-h-0 lets it shrink beside the bottom bar rather than
+              // overflowing the column and pushing the bar off-screen.
+              "min-h-0 w-full flex-1 shrink-0 md:block md:h-full md:w-auto md:flex-none",
               mobilePane === "chat" ? "hidden" : "block",
             )}
           >
@@ -71,7 +75,7 @@ export function AppShell({ user }: AppShellProps) {
 
           <div
             className={cn(
-              "h-full min-w-0 flex-1 md:block",
+              "min-h-0 min-w-0 flex-1 md:block md:h-full",
               mobilePane === "chat" ? "block" : "hidden",
             )}
           >
@@ -83,9 +87,13 @@ export function AppShell({ user }: AppShellProps) {
           </div>
         </>
       ) : navTab === "settings" ? (
-        <SettingsPane user={user} />
+        <div className="min-h-0 flex-1 md:contents">
+          <SettingsPane user={user} />
+        </div>
       ) : (
-        <ComingSoon tab={navTab} />
+        <div className="min-h-0 flex-1 md:contents">
+          <ComingSoon tab={navTab} />
+        </div>
       )}
 
       <NewChatModal open={newChatOpen} onOpenChange={setNewChatOpen} />
