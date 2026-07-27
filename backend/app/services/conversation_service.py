@@ -346,7 +346,13 @@ class ConversationService:
                 conversation, SystemEvent.GROUP_AVATAR_CHANGED, {"actor_id": user.id}
             )
 
-        if payload.disappearing_seconds is not None:
+        # Announce only a real change. Selecting the value already in force is a
+        # no-op, and emitting an event for it fills the transcript with identical
+        # notices that say nothing happened.
+        if (
+            payload.disappearing_seconds is not None
+            and payload.disappearing_seconds != conversation.disappearing_seconds
+        ):
             conversation.disappearing_seconds = payload.disappearing_seconds
             await self._add_system_message(
                 conversation,
