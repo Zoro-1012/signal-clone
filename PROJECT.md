@@ -122,10 +122,10 @@ placeholder reads as an unfinished feature, a designed one reads as a scoped dec
 | Attachments (images / files) | Local disk (dev) / mounted volume (prod) behind a storage interface; thumbnails, lightbox, non-image file cards |
 | Message reactions (emoji) | `message_reactions` table, unique per (message, user, emoji); hover picker + aggregated pills |
 | Reply-to / quoted messages | Self-referential `reply_to_message_id`; quote preview in composer and bubble, click-to-scroll to original |
-| Disappearing messages (functional) | Per-conversation TTL; `expires_at` set on delivery, background sweeper purges, countdown ring in the UI |
+| Disappearing messages (functional) | Per-conversation TTL; `expires_at` set on delivery, background sweeper purges, timer glyph on affected messages |
 | Dark mode | Signal's actual dark palette as CSS custom properties; system / light / dark, no flash on load |
 | Responsive design | Mobile (single pane + back navigation), tablet (two pane), desktop (three pane) |
-| Keyboard shortcuts | `⌘K` search, `⌘N` new chat, `Esc` close, `↑` edit-intent, arrow navigation of the list, `?` shortcut sheet |
+| Keyboard shortcuts | `⌘K` search, `⌘N` new chat, `Esc` close, `Enter` / `Shift+Enter` send and newline |
 
 ---
 

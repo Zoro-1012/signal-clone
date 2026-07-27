@@ -85,7 +85,7 @@ Requires Python 3.10+ and Node 20+.
 
 ```bash
 # backend
-pytest                        # 87 tests
+pytest                        # 97 tests
 pytest --cov=app              # with coverage
 ruff check app tests          # lint
 black app tests               # format
@@ -292,7 +292,9 @@ REST under `/api/v1`, WebSocket at `/ws`. Interactive documentation at `/docs`.
 | `POST` | `/conversations/{id}/messages/{id}/read` | Mark read |
 | `PATCH` `DELETE` | `/messages/{id}` | Edit or delete |
 | `POST` | `/messages/{id}/reactions` | Toggle a reaction |
-| `POST` | `/attachments` | Upload a file |
+| `GET` | `/messages/{id}/info` | Per-recipient delivery and read detail (sender only) |
+| `POST` | `/attachments` | Upload a file, to be claimed on send |
+| `GET` | `/attachments/{key}` | Download a file |
 
 **Conventions.** Cursor pagination, not offset — a transcript grows while it is being
 read, so offsets skip or repeat rows. Cursors are opaque base64 (a raw ISO timestamp ends
@@ -332,8 +334,8 @@ authentication, not authorisation.
 - **Auth** — phone registration, mocked OTP, profile, session persistence, logout
 - **Conversations** — sorted list, search, contacts, unread badges, previews, presence
 - **1:1 messaging** — real-time delivery, timestamps, receipts, typing, status lifecycle
-- **Groups** — creation, membership, admin add/remove, persisted system events
-- **Groups** — member list with roles and presence, admin add/remove, leave group
+- **Groups** — creation, member list with roles and presence, admin add/remove, leave,
+  persisted system events
 - **Signal experience** — three-pane shell, bubbles with grouping, date dividers, modals,
   toasts, empty states, placeholder surfaces
 
@@ -347,7 +349,7 @@ authentication, not authorisation.
 | Responsive layout | Implemented (desktop → tablet → mobile) |
 | Attachments | Implemented — upload from the composer, inline images with a lightbox, file cards, traversal-safe storage |
 | Disappearing messages | Implemented — per-conversation timer, admin-gated in groups, background expiry sweeper |
-| Keyboard shortcuts | Enter to send, Shift+Enter for newline, Escape to dismiss |
+| Keyboard shortcuts | `⌘K` search, `⌘N` new chat, `Enter` send, `Shift+Enter` newline, `Esc` dismiss |
 
 ### Placeholders
 
@@ -403,7 +405,7 @@ architecture, not of security.
 ## Testing
 
 ```bash
-cd backend && pytest        # 87 tests
+cd backend && pytest        # 97 tests
 ```
 
 | Area | Coverage |
