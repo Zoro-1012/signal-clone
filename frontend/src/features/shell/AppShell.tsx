@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import { ConversationList } from "@/features/conversations/ConversationList";
@@ -96,12 +97,7 @@ export function AppShell({ user }: AppShellProps) {
 function EmptyChatPane() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-      <svg viewBox="0 0 48 48" className="h-20 w-20" aria-hidden="true">
-        <path
-          d="M24 4C12.4 4 3 12.5 3 23c0 5.6 2.7 10.6 7 14l-2 6.5 7-3.4c2.8 1.2 5.9 1.9 9 1.9 11.6 0 21-8.5 21-19S35.6 4 24 4Z"
-          fill="var(--accent)"
-        />
-      </svg>
+      <Image src="/signal-logo.svg" alt="" width={80} height={80} className="h-20 w-20" />
       <h2 className="text-xl font-semibold text-content-primary">Welcome to Signal</h2>
       <p className="max-w-xs text-sm text-content-secondary">
         Select a chat to start messaging, or begin a new conversation.

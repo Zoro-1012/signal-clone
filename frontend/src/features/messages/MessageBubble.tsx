@@ -115,25 +115,27 @@ export function MessageBubble({
             </div>
           )}
 
-          {/* Timestamp and receipt sit inline after the text, inside the bubble —
-              Signal's layout, and the reason for the trailing inline-block spacer. */}
-          <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">
-            {deleted ? "This message was deleted" : message.body}
-            <span className="ml-2 inline-block select-none align-bottom text-[11px] opacity-0">
+          {/* Signal puts the timestamp and receipt inside the bubble, trailing the
+              text. Laid out as a wrapping flex row rather than absolutely
+              positioned: an absolute meta block has no width in the text's
+              layout, so a line that ends near the right edge runs underneath it.
+              Wrapping means a long final line simply pushes the meta onto its
+              own line instead of colliding. */}
+          <div className="flex flex-wrap items-end justify-end gap-x-2">
+            <p className="min-w-0 whitespace-pre-wrap break-words text-[15px] leading-snug">
+              {deleted ? "This message was deleted" : message.body}
+            </p>
+            <span
+              className={cn(
+                "flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] leading-5",
+                isOwn ? "text-white/70" : "text-content-tertiary",
+              )}
+            >
+              {message.edited_at && <span className="italic">edited</span>}
               {messageTime(message.created_at)}
+              {isOwn && !deleted && <ReceiptIcon status={message.status} />}
             </span>
-          </p>
-
-          <span
-            className={cn(
-              "absolute bottom-1.5 right-3 flex items-center gap-1 text-[11px]",
-              isOwn ? "text-white/75" : "text-content-tertiary",
-            )}
-          >
-            {message.edited_at && <span className="italic">edited</span>}
-            {messageTime(message.created_at)}
-            {isOwn && !deleted && <ReceiptIcon status={message.status} />}
-          </span>
+          </div>
 
           {message.reactions.length > 0 && (
             <div

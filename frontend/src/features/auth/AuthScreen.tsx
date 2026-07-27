@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -11,15 +12,10 @@ import { useSession } from "@/stores/session";
 type Step = "phone" | "code" | "profile";
 type Mode = "sign-in" | "register";
 
-/** Signal's logo mark, redrawn: a speech bubble with a dashed outline. */
+/** The official Signal mark, from Signal's published brand assets. */
 function SignalMark() {
   return (
-    <svg viewBox="0 0 48 48" className="h-16 w-16" aria-hidden="true">
-      <path
-        d="M24 4C12.4 4 3 12.5 3 23c0 5.6 2.7 10.6 7 14l-2 6.5 7-3.4c2.8 1.2 5.9 1.9 9 1.9 11.6 0 21-8.5 21-19S35.6 4 24 4Z"
-        fill="var(--accent)"
-      />
-    </svg>
+    <Image src="/signal-logo.svg" alt="" width={64} height={64} priority className="h-16 w-16" />
   );
 }
 
