@@ -241,9 +241,7 @@ class TestDepartedMembers:
 
 
 class TestDisappearingTimerAnnouncements:
-    def test_setting_the_timer_to_its_current_value_announces_nothing(
-        self, client: Any
-    ) -> None:
+    def test_setting_the_timer_to_its_current_value_announces_nothing(self, client: Any) -> None:
         """A no-op is not an event; announcing it fills the transcript with noise."""
         alice, bob, _ = _cast(client)
         group = client.post(

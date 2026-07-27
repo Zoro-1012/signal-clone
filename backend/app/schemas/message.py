@@ -134,3 +134,25 @@ class TypingSignal(APIModel):
     """Signal that the caller is or is not composing."""
 
     is_typing: bool = True
+
+
+class RecipientReceipt(APIModel):
+    """One recipient's delivery and read state for a single message."""
+
+    user: UserPublic
+    delivered_at: datetime | None = None
+    read_at: datetime | None = None
+
+
+class MessageInfo(APIModel):
+    """Per-recipient detail behind a message's single summary tick.
+
+    The bubble shows one status because it has room for one, and in a group that
+    is necessarily the weakest link — a message is only "read" once everyone has
+    read it. That collapses information people legitimately want, so this
+    endpoint exposes the rows the summary was derived from.
+    """
+
+    message_id: str
+    sent_at: datetime
+    recipients: list[RecipientReceipt]

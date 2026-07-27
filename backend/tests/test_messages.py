@@ -331,9 +331,7 @@ class TestDisappearingMessages:
         message = next(m for m in items if m["id"] == message_id)
         assert message["expires_at"] is not None
 
-    def test_an_expired_message_vanishes_rather_than_leaving_a_tombstone(
-        self, client: Any
-    ) -> None:
+    def test_an_expired_message_vanishes_rather_than_leaving_a_tombstone(self, client: Any) -> None:
         import asyncio
         import time
 
@@ -359,3 +357,51 @@ class TestDisappearingMessages:
         ).json()["items"]
         assert message_id not in [m["id"] for m in items], "the message is still in the transcript"
         assert not [m for m in items if m["deleted_at"]], "an expiry left a tombstone behind"
+
+
+class TestMessageInfo:
+    """Per-recipient detail behind the single summary tick."""
+
+    def test_it_reports_delivery_and_read_state_per_recipient(self, client: Any) -> None:
+        alice, bob, conversation_id = _pair(client)
+        message = client.post(
+            f"/api/v1/conversations/{conversation_id}/messages",
+            json={"body": "did you see this"},
+            headers=alice.headers,
+        ).json()
+
+        before = client.get(f"/api/v1/messages/{message['id']}/info", headers=alice.headers).json()
+        assert [r["user"]["id"] for r in before["recipients"]] == [bob.id]
+        assert before["recipients"][0]["delivered_at"] is None
+
+        client.post(f"/api/v1/conversations/{conversation_id}/delivered", headers=bob.headers)
+        client.post(
+            f"/api/v1/conversations/{conversation_id}/messages/{message['id']}/read",
+            headers=bob.headers,
+        )
+
+        after = client.get(f"/api/v1/messages/{message['id']}/info", headers=alice.headers).json()
+        assert after["recipients"][0]["delivered_at"] is not None
+        assert after["recipients"][0]["read_at"] is not None
+
+    def test_only_the_sender_may_see_who_read_a_message(self, client: Any) -> None:
+        """The summary tick is shared; who read it and when is the sender's."""
+        alice, bob, conversation_id = _pair(client)
+        message = client.post(
+            f"/api/v1/conversations/{conversation_id}/messages",
+            json={"body": "mine"},
+            headers=alice.headers,
+        ).json()
+        response = client.get(f"/api/v1/messages/{message['id']}/info", headers=bob.headers)
+        assert response.status_code == 403
+
+    def test_a_stranger_cannot_probe_for_a_message(self, client: Any) -> None:
+        alice, _, conversation_id = _pair(client)
+        cara = register_user(client, CARA, "Cara")
+        message = client.post(
+            f"/api/v1/conversations/{conversation_id}/messages",
+            json={"body": "private"},
+            headers=alice.headers,
+        ).json()
+        response = client.get(f"/api/v1/messages/{message['id']}/info", headers=cara.headers)
+        assert response.status_code == 404

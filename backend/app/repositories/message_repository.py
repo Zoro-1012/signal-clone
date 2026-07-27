@@ -229,6 +229,19 @@ class MessageRepository(BaseRepository[Message]):
         )
         return list(result.scalars().all())
 
+    async def receipts_for(self, message_id: str) -> list[MessageReceipt]:
+        """Every recipient's receipt row for one message, sender excluded.
+
+        The sender has no receipt of their own — they did not receive it — so the
+        rows returned are exactly the audience the message was delivered to.
+        """
+        result = await self.session.execute(
+            select(MessageReceipt)
+            .options(joinedload(MessageReceipt.user))
+            .where(MessageReceipt.message_id == message_id)
+        )
+        return list(result.scalars().unique().all())
+
     async def start_expiry_timers(self, message_ids: list[str], seconds: int) -> None:
         """Begin the countdown for messages that have just been delivered.
 

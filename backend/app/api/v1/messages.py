@@ -15,6 +15,7 @@ from app.schemas.cursor import decode_cursor
 from app.schemas.message import (
     AttachmentRead,
     MessageCreate,
+    MessageInfo,
     MessageRead,
     MessageUpdate,
     ReactionCreate,
@@ -96,6 +97,20 @@ async def edit_message(
     message_id: str, payload: MessageUpdate, current_user: CurrentUser, session: SessionDep
 ) -> MessageRead:
     return await MessageService(session).edit(current_user, message_id, payload.body)
+
+
+@router.get(
+    "/messages/{message_id}/info",
+    response_model=MessageInfo,
+    summary="Who received and read a message, and when",
+)
+async def message_info(
+    message_id: str,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> MessageInfo:
+    """Expand the single summary tick into per-recipient detail."""
+    return await MessageService(session).info(current_user, message_id)
 
 
 @router.delete(

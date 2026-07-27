@@ -34,9 +34,11 @@ from app.schemas.cursor import encode_cursor
 from app.schemas.message import (
     AttachmentRead,
     MessageCreate,
+    MessageInfo,
     MessageRead,
     QuotedMessage,
     ReactionSummary,
+    RecipientReceipt,
 )
 from app.schemas.user import UserPublic
 from app.services.conversation_service import ConversationService
@@ -398,6 +400,36 @@ class MessageService:
                 },
             ),
             exclude=actor.id,
+        )
+
+    async def info(self, user: User, message_id: str) -> MessageInfo:
+        """Per-recipient delivery and read detail for one message.
+
+        Restricted to the sender. Everyone in a conversation can see the
+        summary tick, but who has read a message and when is the sender's
+        information about their own message, not a general group roster.
+        """
+        message = await self.messages.get(message_id)
+        if message is None or message.deleted_at is not None:
+            raise NotFoundError("That message does not exist.")
+        await self.conversation_service.require_participation(message.conversation_id, user)
+        if message.sender_id != user.id:
+            raise PermissionDeniedError("You can only see delivery details for your own messages.")
+
+        receipts = await self.messages.receipts_for(message_id)
+        return MessageInfo(
+            message_id=message.id,
+            sent_at=message.created_at,
+            recipients=[
+                RecipientReceipt(
+                    user=UserPublic.model_validate(receipt.user),
+                    delivered_at=receipt.delivered_at,
+                    read_at=receipt.read_at,
+                )
+                for receipt in sorted(
+                    receipts, key=lambda r: (r.read_at is None, r.delivered_at is None)
+                )
+            ],
         )
 
     # -- Disappearing messages --------------------------------------------
