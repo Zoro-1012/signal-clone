@@ -1,8 +1,10 @@
 "use client";
 
-import { Check, CheckCheck, Clock, Trash2, TriangleAlert } from "lucide-react";
+import { Check, CheckCheck, Clock, Timer, Trash2, TriangleAlert } from "lucide-react";
 
 import { Avatar } from "@/components/ui/Avatar";
+
+import { Attachments } from "./Attachments";
 import { avatarPalette } from "@/lib/avatars";
 import { cn } from "@/lib/cn";
 import { messageTime } from "@/lib/format";
@@ -118,6 +120,10 @@ export function MessageBubble({
             </div>
           )}
 
+          {!deleted && message.attachments.length > 0 && (
+            <Attachments attachments={message.attachments} isOwn={isOwn} />
+          )}
+
           {/* Signal puts the timestamp and receipt inside the bubble, trailing the
               text. Laid out as a wrapping flex row rather than absolutely
               positioned: an absolute meta block has no width in the text's
@@ -125,9 +131,11 @@ export function MessageBubble({
               Wrapping means a long final line simply pushes the meta onto its
               own line instead of colliding. */}
           <div className="flex flex-wrap items-end justify-end gap-x-2">
-            <p className="min-w-0 whitespace-pre-wrap break-words text-[15px] leading-snug">
-              {deleted ? "This message was deleted" : message.body}
-            </p>
+            {(deleted || message.body) && (
+              <p className="min-w-0 whitespace-pre-wrap break-words text-[15px] leading-snug">
+                {deleted ? "This message was deleted" : message.body}
+              </p>
+            )}
             <span
               className={cn(
                 "flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] leading-5",
@@ -135,6 +143,13 @@ export function MessageBubble({
               )}
             >
               {message.edited_at && <span className="italic">edited</span>}
+              {message.expires_at && (
+                <Timer
+                  className="h-3 w-3"
+                  aria-label="Disappearing message"
+                  strokeWidth={2.5}
+                />
+              )}
               {messageTime(message.created_at)}
               {isOwn && !deleted && <ReceiptIcon status={message.status} />}
             </span>
