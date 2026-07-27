@@ -356,6 +356,12 @@ which the brief explicitly permits. They are styled rather than blank, because a
 unstyled gap reads as an unfinished feature whereas a designed one reads as a scoped
 decision.
 
+The chat list's overflow menu carries Signal's own three entries — View archive, Add
+chat folder, Notification profile — for interface fidelity. Archiving, folders and
+notification profiles are out of scope, so choosing one says so rather than doing
+nothing quietly: a menu item that swallows a click is indistinguishable from a broken
+one.
+
 ---
 
 ## Security

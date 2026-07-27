@@ -1,17 +1,34 @@
 "use client";
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { CheckCheck, ListFilter, Menu, MoreHorizontal, Search, Settings, SquarePen, Users, X } from "lucide-react";
+import {
+  Archive,
+  ChevronRight,
+  FolderPlus,
+  ListFilter,
+  Menu,
+  Moon,
+  MoreHorizontal,
+  Search,
+  SquarePen,
+  X,
+} from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 
 import { useToast } from "@/components/ui/Toast";
-import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { UserPrivate } from "@/lib/types";
 import { useUi } from "@/stores/ui";
 
 import { ConversationRow } from "./ConversationRow";
 import { useConversations } from "./queries";
+
+/** Signal's overflow menu beside the compose button, entry for entry. */
+const LIST_MENU = [
+  { key: "archive", label: "View archive", Icon: Archive, submenu: false },
+  { key: "folder", label: "Add chat folder", Icon: FolderPlus, submenu: false },
+  { key: "profile", label: "Notification profile", Icon: Moon, submenu: true },
+] as const;
 
 interface ConversationListProps {
   user: UserPrivate;
@@ -30,7 +47,6 @@ export function ConversationList({ user, onNewChat }: ConversationListProps) {
   const railVisible = useUi((s) => s.railVisible);
   const unreadOnly = useUi((s) => s.unreadOnly);
   const setUnreadOnly = useUi((s) => s.setUnreadOnly);
-  const setNavTab = useUi((s) => s.setNavTab);
   const toast = useToast();
 
   const { data, isLoading, isError, refetch } = useConversations(deferredSearch);
@@ -41,32 +57,6 @@ export function ConversationList({ user, onNewChat }: ConversationListProps) {
     () => (unreadOnly ? all.filter((conversation) => conversation.unread_count > 0) : all),
     [all, unreadOnly],
   );
-
-  /**
-   * Clear every unread badge at once.
-   *
-   * The read watermark is per-conversation and anchored to a message, so this
-   * is a fan-out of the same call the chat pane makes rather than a bulk
-   * endpoint — there is no separate server concept of "all read" to invoke.
-   */
-  async function markAllRead() {
-    const unread = all.filter(
-      (conversation) => conversation.unread_count > 0 && conversation.last_message,
-    );
-    if (unread.length === 0) {
-      toast.info("Nothing unread.");
-      return;
-    }
-    await Promise.allSettled(
-      unread.map((conversation) =>
-        api.post(`/conversations/${conversation.id}/read`, {
-          message_id: conversation.last_message!.id,
-        }),
-      ),
-    );
-    void refetch();
-    toast.success(`Marked ${unread.length} ${unread.length === 1 ? "chat" : "chats"} as read.`);
-  }
 
   return (
     <div className="flex h-full w-full flex-col bg-surface-panel md:w-list md:shrink-0 md:border-r md:border-edge-subtle">
@@ -108,30 +98,24 @@ export function ConversationList({ user, onNewChat }: ConversationListProps) {
             <DropdownMenu.Content
               align="end"
               sideOffset={6}
-              className="z-context-menu min-w-48 rounded-2xl border border-edge-subtle bg-surface-raised p-1.5 shadow-lg animate-fade-in"
+              className="z-context-menu min-w-52 rounded-2xl border border-edge-subtle bg-surface-raised p-1.5 shadow-lg animate-fade-in"
             >
-              {[
-                { key: "group", label: "New group", icon: <Users className="h-4 w-4" />, run: onNewChat },
-                {
-                  key: "read",
-                  label: "Mark all read",
-                  icon: <CheckCheck className="h-4 w-4" />,
-                  run: () => void markAllRead(),
-                },
-                {
-                  key: "settings",
-                  label: "Settings",
-                  icon: <Settings className="h-4 w-4" />,
-                  run: () => setNavTab("settings"),
-                },
-              ].map((item) => (
+              {/* Signal's own three entries at this position. None of them has a
+                  feature behind it here — archiving, folders and notification
+                  profiles are all out of scope — so each says so when chosen
+                  rather than silently doing nothing. A menu item that swallows
+                  a click is indistinguishable from a broken one. */}
+              {LIST_MENU.map((item) => (
                 <DropdownMenu.Item
                   key={item.key}
-                  onSelect={item.run}
+                  onSelect={() => toast.info(`${item.label} is not available in this build.`)}
                   className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-content-primary outline-none data-[highlighted]:bg-surface-hover"
                 >
-                  {item.icon}
-                  {item.label}
+                  <item.Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                  <span className="flex-1">{item.label}</span>
+                  {item.submenu && (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" />
+                  )}
                 </DropdownMenu.Item>
               ))}
             </DropdownMenu.Content>
