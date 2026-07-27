@@ -75,6 +75,10 @@ jobs:
           alembic upgrade head
           alembic downgrade base
           alembic upgrade head
+          # And that the models have not drifted away from the migrations. A
+          # model change without a migration passes every test and then fails
+          # on the first deploy to a database that was not created by metadata.
+          alembic check
 
   frontend:
     name: Frontend · lint, types, build
