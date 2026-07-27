@@ -32,6 +32,7 @@ export function AppShell({ user }: AppShellProps) {
   const navTab = useUi((s) => s.navTab);
   const mobilePane = useUi((s) => s.mobilePane);
   const activeId = useUi((s) => s.activeConversationId);
+  const railVisible = useUi((s) => s.railVisible);
   const [newChatOpen, setNewChatOpen] = useState(false);
 
   useConversationRealtime();
@@ -55,7 +56,9 @@ export function AppShell({ user }: AppShellProps) {
     // Column on a phone so the nav bar can take the bottom edge; row on
     // desktop so the rail takes the left.
     <div className="flex h-dvh flex-col overflow-hidden bg-surface-base md:flex-row">
-      <NavRail user={user} unreadTotal={unreadTotal} />
+      {/* Hiding is a desktop affordance: on a phone the bar *is* the
+          navigation, so collapsing it would strand the user. */}
+      <NavRail user={user} unreadTotal={unreadTotal} collapsed={!railVisible} />
 
       {navTab === "chats" ? (
         <>

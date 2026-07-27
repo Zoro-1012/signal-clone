@@ -12,14 +12,27 @@ interface UiState {
   activeConversationId: string | null;
   /** Mobile only: which pane is visible, since both cannot fit. */
   mobilePane: "list" | "chat";
+  /** Desktop only: whether the nav rail is shown. Signal calls this "tabs". */
+  railVisible: boolean;
+  /** Narrow the list to conversations with something unread. */
+  unreadOnly: boolean;
 
   setTheme: (theme: Theme) => void;
   setNavTab: (tab: NavTab) => void;
   openConversation: (id: string | null) => void;
   showList: () => void;
+  toggleRail: () => void;
+  setUnreadOnly: (value: boolean) => void;
 }
 
 const THEME_KEY = "signal-clone:theme";
+const RAIL_KEY = "signal-clone:rail-visible";
+
+/** Chrome preferences belong to the device, so they survive a reload. */
+function storedRailVisible(): boolean {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem(RAIL_KEY) !== "false";
+}
 
 function applyTheme(theme: Theme): void {
   if (typeof document === "undefined") return;
@@ -40,6 +53,10 @@ export const useUi = create<UiState>((set) => ({
   navTab: "chats",
   activeConversationId: null,
   mobilePane: "list",
+  // Server-rendered markup must match the first client render, so this starts
+  // at the default and is reconciled from storage after mount.
+  railVisible: true,
+  unreadOnly: false,
 
   setTheme: (theme) => {
     applyTheme(theme);
@@ -48,4 +65,18 @@ export const useUi = create<UiState>((set) => ({
   setNavTab: (navTab) => set({ navTab }),
   openConversation: (id) => set({ activeConversationId: id, mobilePane: id ? "chat" : "list" }),
   showList: () => set({ mobilePane: "list" }),
+  toggleRail: () =>
+    set((state) => {
+      const railVisible = !state.railVisible;
+      if (typeof window !== "undefined") {
+        localStorage.setItem(RAIL_KEY, String(railVisible));
+      }
+      return { railVisible };
+    }),
+  setUnreadOnly: (unreadOnly) => set({ unreadOnly }),
 }));
+
+/** Re-apply the stored rail preference once the client has taken over. */
+export function hydrateRailPreference(): void {
+  useUi.setState({ railVisible: storedRailVisible() });
+}

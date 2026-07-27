@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { onTokenChange } from "@/lib/api";
 import { realtime } from "@/lib/ws";
 import { useSession } from "@/stores/session";
-import { storedTheme, useUi } from "@/stores/ui";
+import { hydrateRailPreference, storedTheme, useUi } from "@/stores/ui";
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -39,6 +39,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setTheme(storedTheme());
+    hydrateRailPreference();
     void bootstrap();
   }, [bootstrap, setTheme]);
 

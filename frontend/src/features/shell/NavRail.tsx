@@ -45,6 +45,8 @@ const TABS: { id: NavTab; label: string; Icon: IconComponent }[] = [
 interface NavRailProps {
   user: UserPrivate;
   unreadTotal: number;
+  /** Desktop only — the phone's bottom bar is never collapsible. */
+  collapsed?: boolean;
 }
 
 /**
@@ -60,7 +62,7 @@ interface NavRailProps {
  * Rendered as a tablist so arrow keys move between tabs and a screen reader
  * announces the selected one — a row of plain buttons would give neither.
  */
-export function NavRail({ user, unreadTotal }: NavRailProps) {
+export function NavRail({ user, unreadTotal, collapsed = false }: NavRailProps) {
   const navTab = useUi((s) => s.navTab);
   const setNavTab = useUi((s) => s.setNavTab);
   const mobilePane = useUi((s) => s.mobilePane);
@@ -81,6 +83,7 @@ export function NavRail({ user, unreadTotal }: NavRailProps) {
         // Desktop: back to a vertical rail on the left.
         "md:order-none md:w-rail md:flex-col md:justify-start md:border-r md:border-t-0 md:px-0 md:py-3",
         hiddenOnMobile && "hidden md:flex",
+        collapsed && "md:hidden",
       )}
     >
       {TABS.map(({ id, label, Icon }) => {
