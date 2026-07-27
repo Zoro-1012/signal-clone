@@ -49,6 +49,7 @@ interface SendVariables {
   body: string;
   replyToId?: string | null;
   clientMessageId: string;
+  attachmentIds?: string[];
 }
 
 /**
@@ -63,11 +64,18 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ conversationId, body, replyToId, clientMessageId }: SendVariables) =>
+    mutationFn: ({
+      conversationId,
+      body,
+      replyToId,
+      clientMessageId,
+      attachmentIds,
+    }: SendVariables) =>
       api.post<Message>(`/conversations/${conversationId}/messages`, {
         body,
         reply_to_message_id: replyToId ?? null,
         client_message_id: clientMessageId,
+        attachment_ids: attachmentIds ?? [],
       }),
 
     onSettled: (_data, _error, variables) => {
