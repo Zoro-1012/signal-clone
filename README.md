@@ -479,5 +479,11 @@ Stated plainly, so they read as decisions rather than gaps.
 ## Attribution
 
 Signal is a trademark of Signal Messenger, LLC. This project is an independent educational
-clone built for an assignment, is not affiliated with or endorsed by Signal, and contains
-no Signal source code or assets.
+clone built for an assignment and is not affiliated with or endorsed by Signal.
+
+It contains **no Signal source code**. It does include Signal's logo mark
+(`frontend/public/signal-logo.svg` and `.png`) and reproduces its interface, colour
+palette and iconography, because the brief asks for a faithful clone and a clone drawn
+with a substitute logo is not one. Those assets remain the property of Signal Messenger,
+LLC and are used here for an educational exercise, not distribution. Everything else —
+all application code, the schema and the API — is original work.
