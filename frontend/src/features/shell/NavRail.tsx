@@ -1,14 +1,43 @@
 "use client";
 
-import { MessageSquare, Phone, Settings, SquareStack } from "lucide-react";
+import { Phone, Settings, SquareStack } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
 import type { UserPrivate } from "@/lib/types";
 import { type NavTab, useUi } from "@/stores/ui";
 
-const TABS: { id: NavTab; label: string; Icon: typeof MessageSquare }[] = [
-  { id: "chats", label: "Chats", Icon: MessageSquare },
+/**
+ * Signal's chats glyph: a rounded speech bubble with a tail at the lower left.
+ *
+ * Drawn rather than taken from the icon set, which only offers a square-cornered
+ * bubble. The rounded silhouette is the more recognisable half of the mark, and
+ * it is the shape that reads at 24px once the glyph is filled for the selected
+ * tab.
+ *
+ * The path is a single closed outline, so `fill="currentColor"` solidifies it
+ * and `fill="none"` leaves the outline — which is how the rest of the rail
+ * switches between selected and unselected without swapping icons.
+ */
+function ChatBubbleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path d="M12 3.2c-5 0-9 3.5-9 7.9 0 2.3 1.1 4.4 2.9 5.9l-1 3.3c-.16.55.43.99.92.7l3.42-2.06c.88.19 1.8.29 2.76.29 5 0 9-3.5 9-7.9s-4-8.13-9-8.13z" />
+    </svg>
+  );
+}
+
+type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+
+const TABS: { id: NavTab; label: string; Icon: IconComponent }[] = [
+  { id: "chats", label: "Chats", Icon: ChatBubbleIcon },
   { id: "calls", label: "Calls", Icon: Phone },
   { id: "stories", label: "Stories", Icon: SquareStack },
 ];
