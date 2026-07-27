@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
 import { onTokenChange } from "@/lib/api";
 import { realtime } from "@/lib/ws";
 import { useSession } from "@/stores/session";
@@ -51,5 +52,9 @@ export function Providers({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>{children}</ToastProvider>
+    </QueryClientProvider>
+  );
 }

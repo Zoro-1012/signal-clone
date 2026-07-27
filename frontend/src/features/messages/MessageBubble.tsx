@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCheck, Clock, TriangleAlert } from "lucide-react";
+import { Check, CheckCheck, Clock, Trash2, TriangleAlert } from "lucide-react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { avatarPalette } from "@/lib/avatars";
@@ -18,6 +18,8 @@ interface MessageBubbleProps {
   tail: boolean;
   onReact: (messageId: string, emoji: string) => void;
   onReply: (message: Message) => void;
+  /** Only offered for your own messages — the server enforces the same rule. */
+  onDelete?: (messageId: string) => void;
 }
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const;
@@ -53,6 +55,7 @@ export function MessageBubble({
   tail,
   onReact,
   onReply,
+  onDelete,
 }: MessageBubbleProps) {
   const deleted = message.deleted_at !== null;
   const senderColor = avatarPalette(message.sender?.avatar_color).fg;
@@ -184,6 +187,16 @@ export function MessageBubble({
               <path d="M3 11h11a6 6 0 016 6v2" />
             </svg>
           </button>
+          {isOwn && onDelete && (
+            <button
+              onClick={() => onDelete(message.id)}
+              aria-label="Delete message"
+              title="Delete message"
+              className="rounded-full p-1.5 text-content-tertiary hover:bg-surface-hover hover:text-signal-red"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
           <div className="relative">
             <details className="group/menu">
               <summary

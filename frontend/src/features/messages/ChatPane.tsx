@@ -1,14 +1,16 @@
 "use client";
 
-import { ArrowLeft, MoreVertical, Phone, Search, Video } from "lucide-react";
+import { ArrowLeft, MoreVertical, Phone, Search, Users, Video } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/cn";
 import { dayDivider, lastSeen, shouldGroup } from "@/lib/format";
 import type { Conversation, Message, UserPrivate } from "@/lib/types";
 import { realtime, type Frame } from "@/lib/ws";
 import { useUi } from "@/stores/ui";
+
+import { GroupInfoPanel } from "@/features/groups/GroupInfoPanel";
+import { useToast } from "@/components/ui/Toast";
 
 import { Composer } from "./Composer";
 import { MessageBubble } from "./MessageBubble";
@@ -35,6 +37,8 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
   const showList = useUi((s) => s.showList);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const toast = useToast();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -112,12 +116,17 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
     .filter((name): name is string => Boolean(name));
 
   function handleSend(body: string) {
-    sendMessage.mutate({
-      conversationId: conversation.id,
-      body,
-      replyToId: replyTo?.id ?? null,
-      clientMessageId: crypto.randomUUID(),
-    });
+    sendMessage.mutate(
+      {
+        conversationId: conversation.id,
+        body,
+        replyToId: replyTo?.id ?? null,
+        clientMessageId: crypto.randomUUID(),
+      },
+      {
+        onError: () => toast.error("Message failed to send. Check your connection."),
+      },
+    );
     setReplyTo(null);
     pinnedToBottom.current = true;
   }
@@ -133,24 +142,45 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
           <ArrowLeft className="h-5 w-5" />
         </button>
 
-        <Avatar
-          name={conversation.name ?? "Conversation"}
-          color={conversation.avatar_color}
-          src={conversation.avatar_url}
-          size="sm"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-content-primary">{conversation.name}</p>
-          <p className="truncate text-xs text-content-secondary">
-            {isGroup
-              ? `${conversation.participants.length} members`
-              : other
-                ? lastSeen(other.user.last_seen_at, other.user.is_online)
-                : ""}
-          </p>
-        </div>
+        {/* The whole header identity is the affordance for group info, matching
+            Signal, with an explicit members button as a discoverable fallback. */}
+        <button
+          onClick={() => isGroup && setGroupInfoOpen(true)}
+          disabled={!isGroup}
+          aria-label={isGroup ? "Group info" : undefined}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 text-left enabled:hover:bg-surface-hover"
+        >
+          <Avatar
+            name={conversation.name ?? "Conversation"}
+            color={conversation.avatar_color}
+            src={conversation.avatar_url}
+            size="sm"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium text-content-primary">
+              {conversation.name}
+            </span>
+            <span className="block truncate text-xs text-content-secondary">
+              {isGroup
+                ? `${conversation.participants.length} members`
+                : other
+                  ? lastSeen(other.user.last_seen_at, other.user.is_online)
+                  : ""}
+            </span>
+          </span>
+        </button>
 
         <div className="flex items-center gap-1 text-content-secondary">
+          {isGroup && (
+            <button
+              onClick={() => setGroupInfoOpen(true)}
+              aria-label="Group members"
+              title="Group members"
+              className="rounded-full p-2 transition-colors hover:bg-surface-hover hover:text-content-primary"
+            >
+              <Users className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+          )}
           {[
             { Icon: Video, label: "Video call" },
             { Icon: Phone, label: "Voice call" },
@@ -249,6 +279,12 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
                 tail={tail}
                 onReact={(messageId, emoji) => toggleReaction.mutate({ messageId, emoji })}
                 onReply={setReplyTo}
+                onDelete={(messageId) =>
+                  deleteMessage.mutate(messageId, {
+                    onSuccess: () => toast.success("Message deleted."),
+                    onError: () => toast.error("Could not delete that message."),
+                  })
+                }
               />
             </div>
           );
@@ -266,8 +302,13 @@ export function ChatPane({ conversation, user }: ChatPaneProps) {
         onSend={handleSend}
       />
 
-      {deleteMessage.isError && (
-        <p className={cn("px-4 pb-2 text-xs text-signal-red")}>Could not delete that message.</p>
+      {isGroup && (
+        <GroupInfoPanel
+          conversation={conversation}
+          user={user}
+          open={groupInfoOpen}
+          onOpenChange={setGroupInfoOpen}
+        />
       )}
     </div>
   );
