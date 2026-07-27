@@ -9,6 +9,7 @@ a failed transaction then rolled back.
 from __future__ import annotations
 
 from collections import defaultdict
+from contextlib import suppress
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,7 +69,14 @@ class MessageService:
         limit: int = 50,
     ) -> tuple[list[MessageRead], str | None]:
         """Return a page of history plus the cursor for the next one."""
-        await self.conversation_service.require_participation(conversation_id, user)
+        participation = await self.conversation_service.require_readable(conversation_id, user)
+
+        # A former member keeps what they saw and gains nothing after. Without
+        # this cap, removing someone from a group would leave them subscribed to
+        # its future history — the opposite of what removal is for.
+        ceiling = participation.left_at
+        if ceiling is not None and (before is None or ceiling < before):
+            before = ceiling
 
         # Fetch one extra row to learn whether another page exists, without a
         # second COUNT query over the whole conversation.
@@ -395,18 +403,33 @@ class MessageService:
     # -- Disappearing messages --------------------------------------------
 
     async def purge_expired(self) -> int:
-        """Delete messages whose timer has elapsed. Returns how many."""
+        """Erase messages whose timer has elapsed. Returns how many.
+
+        Rows are deleted outright rather than soft-deleted. Soft-deleting leaves
+        a "This message was deleted" tombstone, which is right for a message
+        someone chose to retract — the other person saw it, and pretending
+        otherwise would be dishonest — but wrong here. A disappearing message
+        promises that nothing remains, and a tombstone is something remaining.
+
+        Receipts, reactions and attachment rows follow via cascade; replies to an
+        expired message keep their text and lose the quote (the FK is SET NULL).
+        Attachment files are unlinked first, since the filesystem has no cascade
+        and orphaned blobs would otherwise outlive the messages that justified
+        holding them.
+        """
         expired = await self.messages.expired()
         if not expired:
             return 0
 
         by_conversation: dict[str, list[str]] = defaultdict(list)
         for message in expired:
-            message.deleted_at = utcnow()
-            message.ciphertext = None
-            message.encryption_key_id = None
-            message.encryption_algorithm = None
+            for attachment in message.attachments:
+                path = storage.path_for(attachment.storage_key)
+                if path is not None:
+                    with suppress(OSError):
+                        path.unlink(missing_ok=True)
             by_conversation[message.conversation_id].append(message.id)
+            await self.session.delete(message)
         await self.session.commit()
 
         for conversation_id, message_ids in by_conversation.items():
@@ -415,7 +438,7 @@ class MessageService:
                 await self.events.broadcast(
                     participant_ids,
                     build(
-                        EventType.MESSAGE_DELETED,
+                        EventType.MESSAGE_EXPIRED,
                         {"conversation_id": conversation_id, "message_id": message_id},
                     ),
                 )

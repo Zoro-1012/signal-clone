@@ -211,9 +211,15 @@ class MessageRepository(BaseRepository[Message]):
     # -- Disappearing messages --------------------------------------------
 
     async def expired(self, *, limit: int = 500) -> list[Message]:
-        """Messages whose disappearing timer has elapsed."""
+        """Messages whose disappearing timer has elapsed.
+
+        Attachments are eager-loaded because the sweeper deletes their files
+        before deleting the rows, and a lazy load during that pass would emit
+        IO from a context that has already left the greenlet.
+        """
         result = await self.session.execute(
             select(Message)
+            .options(selectinload(Message.attachments))
             .where(
                 Message.expires_at.is_not(None),
                 Message.expires_at <= utcnow(),

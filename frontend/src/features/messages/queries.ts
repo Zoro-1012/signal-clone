@@ -126,6 +126,9 @@ export function useMessageRealtime(conversationId: string | null) {
         frame.type === "message.new" ||
         frame.type === "message.updated" ||
         frame.type === "message.deleted" ||
+        // Expired messages are gone server-side, so a refetch drops them from
+        // the transcript rather than leaving a tombstone.
+        frame.type === "message.expired" ||
         frame.type === "message.status" ||
         frame.type === "reaction.added" ||
         frame.type === "reaction.removed"

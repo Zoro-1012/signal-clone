@@ -296,3 +296,66 @@ class TestPagination:
 
         # No overlap between pages, which is the property offset pagination loses.
         assert not {m["id"] for m in first["items"]} & {m["id"] for m in second["items"]}
+
+
+class TestDisappearingMessages:
+    """An expired message must leave nothing — not even a tombstone.
+
+    Retracting a message and a message expiring look similar and mean opposite
+    things. A retraction leaves "This message was deleted" because the other
+    person saw it and pretending otherwise would be dishonest. An expiry leaves
+    nothing, because leaving no trace is the entire promise of the feature.
+    """
+
+    def _armed(self, client: Any) -> tuple[Any, Any, str, str]:
+        alice, bob, conversation_id = _pair(client)
+        client.patch(
+            f"/api/v1/conversations/{conversation_id}",
+            json={"disappearing_seconds": 1},
+            headers=alice.headers,
+        )
+        message = client.post(
+            f"/api/v1/conversations/{conversation_id}/messages",
+            json={"body": "read this quickly"},
+            headers=alice.headers,
+        ).json()
+        # The countdown starts on delivery, not on send.
+        client.post(f"/api/v1/conversations/{conversation_id}/delivered", headers=bob.headers)
+        return alice, bob, conversation_id, message["id"]
+
+    def test_the_timer_starts_when_the_message_is_delivered(self, client: Any) -> None:
+        alice, _, conversation_id, message_id = self._armed(client)
+        items = client.get(
+            f"/api/v1/conversations/{conversation_id}/messages", headers=alice.headers
+        ).json()["items"]
+        message = next(m for m in items if m["id"] == message_id)
+        assert message["expires_at"] is not None
+
+    def test_an_expired_message_vanishes_rather_than_leaving_a_tombstone(
+        self, client: Any
+    ) -> None:
+        import asyncio
+        import time
+
+        from app.db.session import get_session_factory
+        from app.services.message_service import MessageService
+
+        alice, _, conversation_id, message_id = self._armed(client)
+        time.sleep(1.1)  # let the one-second timer elapse
+
+        # The sweeper normally runs as a background task against the process-wide
+        # factory. Resolve the override instead, or the sweep silently operates
+        # on a different database and the assertions below prove nothing.
+        factory = client.app.dependency_overrides[get_session_factory]()
+
+        async def sweep() -> int:
+            async with factory() as session:
+                return await MessageService(session).purge_expired()
+
+        assert asyncio.run(sweep()) >= 1
+
+        items = client.get(
+            f"/api/v1/conversations/{conversation_id}/messages", headers=alice.headers
+        ).json()["items"]
+        assert message_id not in [m["id"] for m in items], "the message is still in the transcript"
+        assert not [m for m in items if m["deleted_at"]], "an expiry left a tombstone behind"

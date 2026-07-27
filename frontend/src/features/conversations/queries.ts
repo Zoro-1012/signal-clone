@@ -40,6 +40,7 @@ export function useConversationRealtime() {
     const relevant = new Set([
       "message.new",
       "message.deleted",
+      "message.expired",
       "message.status",
       "conversation.updated",
       "presence.update",

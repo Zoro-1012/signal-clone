@@ -19,6 +19,11 @@ class EventType(str, Enum):
     MESSAGE_NEW = "message.new"
     MESSAGE_UPDATED = "message.updated"
     MESSAGE_DELETED = "message.deleted"
+    # Distinct from MESSAGE_DELETED on purpose. A deleted message leaves a
+    # tombstone, because the other person saw it and hiding that it ever existed
+    # would be dishonest. An expired message leaves nothing: the whole promise of
+    # a disappearing message is that no trace remains.
+    MESSAGE_EXPIRED = "message.expired"
     MESSAGE_STATUS = "message.status"
     REACTION_ADDED = "reaction.added"
     REACTION_REMOVED = "reaction.removed"
